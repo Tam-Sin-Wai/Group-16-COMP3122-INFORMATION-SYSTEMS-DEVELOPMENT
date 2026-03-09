@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Virtual Teacher – EduAI{% endblock %}
+{% block page_title %}Virtual Teacher{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-6 h-full" style="height: calc(100vh - 120px);">
+
+  <!-- Left panel: Course selector & info -->
+  <div class="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
+
+    <!-- Course selector card -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <h2 class="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-book-open text-primary-600"></i> Select Course
+      </h2>
+      <select id="course-select"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm
+                     text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400
+                     focus:border-transparent transition-all">
+        <option value="">Loading courses…</option>
+      </select>
+      <div id="course-description" class="mt-3 text-xs text-slate-500 leading-relaxed hidden"></div>
+    </div>
+
+    <!-- Material types legend -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800 mb-3 text-sm">Available Context</h3>
+      <div id="material-types" class="space-y-2 text-xs text-slate-500">
+        <p class="text-slate-400 italic">Select a course to see available materials.</p>
+      </div>
+    </div>
+
+    <!-- Tips card -->
+    <div class="bg-primary-50 rounded-2xl border border-primary-100 p-5">
+      <h3 class="font-semibold text-primary-800 mb-2 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-lightbulb text-primary-500"></i> Tips
+      </h3>
+      <ul class="text-xs text-primary-700 space-y-1.5">
+        <li>• Ask about lecture concepts for a clear explanation.</li>
+        <li>• Request assignment tips and structure guidance.</li>
+        <li>• Ask for a summary of Padlet discussions.</li>
+        <li>• Get help connecting topics to course objectives.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Right panel: Chat -->
+  <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    <!-- Chat header -->
+    <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50 flex-shrink-0">
+      <div class="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center shadow">
+        <i class="fa-solid fa-robot text-white text-base"></i>
+      </div>
+      <div>
+        <div class="font-semibold text-slate-800 text-sm" id="chat-header-title">Virtual Teacher</div>
+        <div class="text-xs text-green-500 font-medium flex items-center gap-1">
+          <span class="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+          <span id="chat-header-status">Ready – select a course to begin</span>
+        </div>
+      </div>
+      <div class="ml-auto">
+        <button id="clear-chat-btn"
+                onclick="clearChat()"
+                class="text-slate-400 hover:text-red-500 transition-colors text-sm"
+                title="Clear chat">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages area -->
+    <div id="chat-messages"
+         class="flex-1 overflow-y-auto p-5 space-y-4 scroll-smooth">
+
+      <!-- Welcome message -->
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0 shadow mt-0.5">
+          <i class="fa-solid fa-robot text-white text-xs"></i>
+        </div>
+        <div class="chat-bubble-ai max-w-[85%]">
+          <p class="text-sm leading-relaxed">
+            👋 Hello! I'm your <strong>Virtual Teacher</strong>, powered by GenAI.
+          </p>
+          <p class="text-sm leading-relaxed mt-2">
+            Please <strong>select a course</strong> from the left panel to get started.
+            I'll draw from that course's lecture notes, transcripts, assignments, and Padlet
+            discussions to give you accurate, context-specific answers.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="border-t border-slate-100 p-4 flex-shrink-0 bg-slate-50">
+      <div class="flex items-end gap-3">
+        <div class="flex-1 relative">
+          <textarea id="message-input"
+                    rows="1"
+                    placeholder="Ask a question about your course…"
+                    class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12
+                           text-sm text-slate-700 placeholder-slate-400 focus:outline-none
+                           focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                           transition-all max-h-32 overflow-y-auto"
+                    onkeydown="handleKeyDown(event)"
+                    oninput="autoResize(this)"></textarea>
+        </div>
+        <button id="send-btn"
+                onclick="sendMessage()"
+                class="w-11 h-11 rounded-xl bg-primary-600 hover:bg-primary-700 active:bg-primary-800
+                       text-white flex items-center justify-center transition-colors shadow flex-shrink-0
+                       disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-paper-plane text-sm" id="send-icon"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mt-2 text-center">
+        Responses are AI-generated based on course materials. Always verify with your lecturer.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}
