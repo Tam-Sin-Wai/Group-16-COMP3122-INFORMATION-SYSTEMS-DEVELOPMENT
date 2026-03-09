@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – EduAI{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome banner -->
+<div class="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-6 text-white mb-6">
+  <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-bold mb-1">Welcome back, Student! 👋</h2>
+      <p class="text-primary-200 text-sm">
+        Your AI-powered learning companion is ready. Ask questions, explore materials, and excel in your studies.
+      </p>
+    </div>
+    <a href="/virtual-teacher"
+       class="flex-shrink-0 inline-flex items-center gap-2 bg-white text-primary-700 font-semibold
+              px-5 py-2.5 rounded-xl hover:bg-primary-50 transition-colors shadow">
+      <i class="fa-solid fa-robot"></i> Ask Virtual Teacher
+    </a>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="stat-card bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+        <i class="fa-solid fa-book text-primary-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-slate-800">3</div>
+        <div class="text-xs text-slate-500">Enrolled Courses</div>
+      </div>
+    </div>
+  </div>
+  <div class="stat-card bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+        <i class="fa-solid fa-file-pen text-amber-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-slate-800">5</div>
+        <div class="text-xs text-slate-500">Pending Assignments</div>
+      </div>
+    </div>
+  </div>
+  <div class="stat-card bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+        <i class="fa-solid fa-circle-check text-green-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-slate-800">12</div>
+        <div class="text-xs text-slate-500">Completed Tasks</div>
+      </div>
+    </div>
+  </div>
+  <div class="stat-card bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+        <i class="fa-solid fa-robot text-purple-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-slate-800">28</div>
+        <div class="text-xs text-slate-500">AI Conversations</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Enrolled Courses -->
+  <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800">Enrolled Courses</h3>
+      <span class="text-xs text-primary-600 font-medium cursor-pointer hover:underline">View all</span>
+    </div>
+    <div class="divide-y divide-slate-100">
+      {% set courses = [
+        {"code": "COMP3122", "name": "Information Systems Development", "progress": 65, "color": "bg-indigo-500"},
+        {"code": "COMP3201", "name": "Artificial Intelligence", "progress": 42, "color": "bg-purple-500"},
+        {"code": "COMP3301", "name": "Database Management Systems", "progress": 80, "color": "bg-teal-500"},
+      ] %}
+      {% for course in courses %}
+      <div class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+        <div class="w-10 h-10 rounded-xl {{ course.color }} flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+          {{ course.code[:4] }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-slate-800 text-sm truncate">{{ course.name }}</div>
+          <div class="text-xs text-slate-500">{{ course.code }}</div>
+          <div class="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full {{ course.color }} rounded-full" style="width: {{ course.progress }}%"></div>
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <div class="text-sm font-semibold text-slate-700">{{ course.progress }}%</div>
+          <div class="text-xs text-slate-400">progress</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800">Quick Actions</h3>
+    </div>
+    <div class="p-4 grid grid-cols-2 gap-3">
+      <a href="/virtual-teacher"
+         class="quick-action flex flex-col items-center gap-2 p-4 rounded-xl bg-primary-50
+                hover:bg-primary-100 transition-colors text-center">
+        <i class="fa-solid fa-robot text-2xl text-primary-600"></i>
+        <span class="text-xs font-medium text-primary-700">Virtual Teacher</span>
+      </a>
+      <a href="/materials"
+         class="quick-action flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-50
+                hover:bg-amber-100 transition-colors text-center">
+        <i class="fa-solid fa-book-open text-2xl text-amber-600"></i>
+        <span class="text-xs font-medium text-amber-700">Materials</span>
+      </a>
+      <a href="/assignments"
+         class="quick-action flex flex-col items-center gap-2 p-4 rounded-xl bg-green-50
+                hover:bg-green-100 transition-colors text-center">
+        <i class="fa-solid fa-file-pen text-2xl text-green-600"></i>
+        <span class="text-xs font-medium text-green-700">Assignments</span>
+      </a>
+      <a href="/grades"
+         class="quick-action flex flex-col items-center gap-2 p-4 rounded-xl bg-rose-50
+                hover:bg-rose-100 transition-colors text-center">
+        <i class="fa-solid fa-chart-bar text-2xl text-rose-600"></i>
+        <span class="text-xs font-medium text-rose-700">Grades</span>
+      </a>
+      <a href="/padlet"
+         class="quick-action col-span-2 flex items-center justify-center gap-2 p-3 rounded-xl bg-teal-50
+                hover:bg-teal-100 transition-colors text-center">
+        <i class="fa-solid fa-comments text-2xl text-teal-600"></i>
+        <span class="text-xs font-medium text-teal-700">Padlet Discussions</span>
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Upcoming deadlines -->
+<div class="mt-6 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+    <h3 class="font-semibold text-slate-800">Upcoming Deadlines</h3>
+    <a href="/assignments" class="text-xs text-primary-600 font-medium hover:underline">View all</a>
+  </div>
+  <div class="divide-y divide-slate-100">
+    {% set deadlines = [
+      {"title": "Assignment 1 – IS Development Project Proposal", "course": "COMP3122", "due": "Mar 15, 2026", "status": "in_progress", "days": 6},
+      {"title": "Assignment 1 – AI Ethics Essay", "course": "COMP3201", "due": "Mar 20, 2026", "status": "not_started", "days": 11},
+      {"title": "Assignment 1 – Database Design Project", "course": "COMP3301", "due": "Mar 25, 2026", "status": "not_started", "days": 16},
+    ] %}
+    {% for item in deadlines %}
+    <div class="flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50">
+      <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center text-center flex-shrink-0
+                  {% if item.days <= 7 %}bg-red-100 text-red-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+        <div class="text-lg font-bold leading-none">{{ item.days }}</div>
+        <div class="text-xs">days</div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium text-slate-800 truncate">{{ item.title }}</div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ item.course }} &bull; Due {{ item.due }}</div>
+      </div>
+      <span class="text-xs px-2 py-1 rounded-full flex-shrink-0
+                   {% if item.status == 'in_progress' %}bg-amber-100 text-amber-700
+                   {% elif item.status == 'completed' %}bg-green-100 text-green-700
+                   {% else %}bg-slate-100 text-slate-600{% endif %}">
+        {% if item.status == 'in_progress' %}In Progress
+        {% elif item.status == 'completed' %}Completed
+        {% else %}Not Started{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
