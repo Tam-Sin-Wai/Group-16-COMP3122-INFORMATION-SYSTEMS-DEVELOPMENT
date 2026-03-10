@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EduAI Next.js App
 
-## Getting Started
+Course-aware learning platform prototype with GenAI virtual teacher and file upload center.
 
-First, run the development server:
+## Implemented now
+
+- Virtual Teacher chat per course (context-aware by selected course)
+- Upload Center for course knowledge base files
+- File list, preview, rename, delete, and quick summary
+- Placeholder UI blocks for future modules (Assignments, Padlet Insights, Study Group Hub)
+
+## Tech stack
+
+- Next.js App Router
+- Supabase Storage
+- Optional OpenAI API (`gpt-4o-mini`) with fallback response mode
+
+## Environment variables
+
+Create `.env.local` in this folder and set:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+OPENAI_API_KEY=... # optional, fallback reply is used if missing
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Notes:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- This app uses bucket name: `documents`
+- Files are organized by course path: `courses/<courseId>/...`
+- If bucket is private, preview links will not open without signed URL flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local run
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Vercel deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Import this folder as a Next.js project in Vercel.
+2. Set project root to `edu-16-app`.
+3. Add the same environment variables in Vercel Project Settings.
+4. Deploy.
 
-## Deploy on Vercel
+## Current API routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `POST /api/files/upload`
+- `GET /api/files/list?courseId=<id>`
+- `POST /api/files/delete`
+- `POST /api/files/rename`
+- `POST /api/files/summary`
+- `POST /api/virtual-teacher/chat`
