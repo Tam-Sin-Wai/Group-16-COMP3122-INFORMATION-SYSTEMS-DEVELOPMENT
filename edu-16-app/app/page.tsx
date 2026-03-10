@@ -14,6 +14,7 @@ type FileItem = {
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+  createdAt: string;
 };
 
 function basename(path: string) {
@@ -27,7 +28,22 @@ function stripTimestampPrefix(filename: string) {
 }
 
 function formatTime(ts: string) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '--:-- UTC';
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${hh}:${mm} UTC`;
+}
+
+function formatDateTime(ts: string) {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '-';
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const min = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${min} UTC`;
 }
 
 export default function Home() {
@@ -63,6 +79,7 @@ export default function Home() {
       role: 'assistant',
       content:
         'I am your virtual teacher. Ask about lecture concepts, assignment structure, or Padlet discussion themes for this course.',
+      createdAt: '2026-01-01T00:00:00.000Z',
     },
   ]);
 
@@ -266,7 +283,7 @@ export default function Home() {
     const message = chatInput.trim();
     if (!message || chatLoading) return;
 
-    const nextMessages = [...chatMessages, { role: 'user' as const, content: message }];
+    const nextMessages = [...chatMessages, { role: 'user' as const, content: message, createdAt: new Date().toISOString() }];
     setChatMessages(nextMessages);
     setChatInput('');
     setChatLoading(true);
@@ -283,7 +300,10 @@ export default function Home() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.response || 'No response' }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.response || 'No response', createdAt: new Date().toISOString() },
+      ]);
     } catch (err: unknown) {
       const messageText = err instanceof Error ? err.message : String(err);
       setChatMessages((prev) => [
@@ -291,6 +311,7 @@ export default function Home() {
         {
           role: 'assistant',
           content: `I cannot reach the AI service right now. Here is a fallback suggestion: Review the latest lecture summary and assignment criteria for ${selectedCourse.code}. Error: ${messageText}`,
+          createdAt: new Date().toISOString(),
         },
       ]);
     } finally {
@@ -328,6 +349,7 @@ export default function Home() {
                 role: 'assistant',
                 content:
                   'I am your virtual teacher. Ask about lecture concepts, assignment structure, or Padlet discussion themes for this course.',
+                createdAt: '2026-01-01T00:00:00.000Z',
               },
             ]);
           }}
@@ -360,7 +382,7 @@ export default function Home() {
             {chatMessages.map((msg, idx) => (
               <div key={`${msg.role}-${idx}`} className={`bubble ${msg.role}`}>
                 <p>{msg.content}</p>
-                <small>{formatTime(new Date().toISOString())}</small>
+                <small>{formatTime(msg.createdAt)}</small>
               </div>
             ))}
           </div>
@@ -435,7 +457,7 @@ export default function Home() {
                 {sortedFiles.map(({ f, display }) => (
                   <tr key={f.path}>
                     <td>{display}</td>
-                    <td>{f.updated_at ? new Date(f.updated_at).toLocaleString() : '-'}</td>
+                    <td>{f.updated_at ? formatDateTime(f.updated_at) : '-'}</td>
                     <td>
                       <button className="small" onClick={() => openPreview(f, display)}>
                         Open

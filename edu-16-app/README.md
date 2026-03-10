@@ -9,6 +9,12 @@ Course-aware learning platform prototype with GenAI virtual teacher and file upl
 - File list, preview, rename, delete, and quick summary
 - Placeholder UI blocks for future modules (Assignments, Padlet Insights, Study Group Hub)
 
+## New MVP planning and backend scaffold
+
+- MVP spec document: `docs/mvp-grouping-chat-ai.md`
+- Supabase schema migration draft: `supabase/schema.grouping-chat-ai.sql`
+- Grouping/chat APIs scaffolded for project-based groups, member presence, and `@ai` replies
+
 ## Tech stack
 
 - Next.js App Router
@@ -55,3 +61,15 @@ Open `http://localhost:3000`.
 - `POST /api/files/rename`
 - `POST /api/files/summary`
 - `POST /api/virtual-teacher/chat`
+
+### New project grouping and group chat APIs
+
+- `POST /api/projects`
+- `GET /api/projects?courseId=<id>`
+- `POST /api/projects/[projectId]/groups/auto`
+- `GET /api/projects/[projectId]/groups`
+- `POST /api/projects/[projectId]/groups/assign`
+- `GET /api/groups/[groupId]/messages?limit=50&before=<iso>`
+- `POST /api/groups/[groupId]/messages`
+- `POST /api/groups/[groupId]/presence`
+- `GET /api/groups/[groupId]/members`
