@@ -5,7 +5,22 @@
 A teacher-facilitated, student-centred, personalised, and interactive learning platform
 powered by Generative AI — enabling teachers to deliver adaptive learning experiences at scale.
 
+---------------------------------------------------------------------------
+Todo
+---------------------------------------------------------------------------
+add keys to vercel : ai api, supabase api
+add functions
+
+
+
+
+
+
+
+
+
 ---
+
 
 ## Platform Vision
 
