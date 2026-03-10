@@ -89,18 +89,24 @@
           <span>Assignments</span>
         </a>
 
+        <p class="px-3 text-xs font-semibold text-primary-400 uppercase tracking-widest mt-5 mb-2">Collaboration</p>
+
+        <a href="/groups" class="nav-link {% if request.path.startswith('/groups') %}active{% endif %}">
+          <i class="fa-solid fa-people-group w-5 text-center"></i>
+          <span>Study Groups</span>
+          <span class="ml-auto text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">New</span>
+        </a>
+
+        <a href="/padlet" class="nav-link {% if request.path == '/padlet' %}active{% endif %}">
+          <i class="fa-solid fa-comments w-5 text-center"></i>
+          <span>Class Discussions</span>
+        </a>
+
         <p class="px-3 text-xs font-semibold text-primary-400 uppercase tracking-widest mt-5 mb-2">Academic</p>
 
         <a href="/grades" class="nav-link {% if request.path == '/grades' %}active{% endif %}">
           <i class="fa-solid fa-chart-bar w-5 text-center"></i>
           <span>Grades</span>
-        </a>
-
-        <a href="/padlet" class="nav-link {% if request.path == '/padlet' %}active{% endif %}">
-          <i class="fa-brands fa-padlet w-5 text-center" style="font-family:inherit">
-            <i class="fa-solid fa-comments"></i>
-          </i>
-          <span>Padlet Discussions</span>
         </a>
       </nav>
 

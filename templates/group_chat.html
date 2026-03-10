@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} – Group Chat – EduAI{% endblock %}
+{% block page_title %}{{ group.name }} – Group Chat{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-6 h-full" style="height: calc(100vh - 120px);">
+
+  <!-- Left panel: Group info & members -->
+  <div class="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+
+    <!-- Back link -->
+    <a href="/groups"
+       class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 transition-colors">
+      <i class="fa-solid fa-arrow-left"></i> All Groups
+    </a>
+
+    <!-- Group info card -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-people-group text-green-600"></i>
+        </div>
+        <div>
+          <div class="font-semibold text-slate-800 text-sm">{{ group.name }}</div>
+          <div class="text-xs text-slate-500">{{ group.course_code }}</div>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+        <span class="font-medium text-slate-700">Project:</span> {{ group.project }}
+      </div>
+    </div>
+
+    <!-- Members list -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex-1 overflow-y-auto">
+      <h3 class="font-semibold text-slate-800 mb-3 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-users text-slate-400 text-xs"></i>
+        Members
+        <span class="ml-auto text-xs text-slate-400">{{ group.members | length }}</span>
+      </h3>
+      <div class="space-y-3">
+        {% for m in group.members %}
+        {% set online = (m.last_online == 'Online now') %}
+        {% set recent = ('min ago' in m.last_online) %}
+        <div class="flex items-center gap-2.5">
+          <div class="relative flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-xs font-semibold text-primary-700">
+              {{ m.avatar }}
+            </div>
+            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white
+                         {% if online %}bg-green-400{% elif recent %}bg-amber-400{% else %}bg-slate-300{% endif %}"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium text-slate-800 truncate">
+              {{ m.name }}
+              {% if m.role == 'leader' %}
+              <span class="text-xs bg-amber-100 text-amber-700 px-1 rounded">Leader</span>
+              {% endif %}
+            </div>
+            <div class="text-xs {% if online %}text-green-500{% elif recent %}text-amber-500{% else %}text-slate-400{% endif %}">
+              {{ m.last_online }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <!-- AI assistant entry -->
+        <div class="flex items-center gap-2.5 pt-2 border-t border-slate-100">
+          <div class="relative flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center">
+              <i class="fa-solid fa-robot text-white text-xs"></i>
+            </div>
+            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-400"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium text-slate-800">EduAI Assistant</div>
+            <div class="text-xs text-green-500">Always available</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="bg-primary-50 rounded-2xl border border-primary-100 p-4">
+      <h3 class="font-semibold text-primary-800 mb-2 text-xs flex items-center gap-1.5">
+        <i class="fa-solid fa-lightbulb text-primary-500"></i> AI Tip
+      </h3>
+      <p class="text-xs text-primary-700 leading-relaxed">
+        Type <code class="bg-primary-100 px-1 rounded">@AI</code> at the start of your message
+        to ask the AI assistant. It knows your course materials for
+        <strong>{{ group.course_code }}</strong>!
+      </p>
+    </div>
+  </div>
+
+  <!-- Right panel: Chat -->
+  <div class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    <!-- Chat header -->
+    <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-slate-50 flex-shrink-0">
+      <div class="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center shadow">
+        <i class="fa-solid fa-people-group text-green-600 text-base"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-slate-800 text-sm">{{ group.name }}</div>
+        <div class="text-xs text-slate-500 truncate">{{ group.project }}</div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span id="ai-status" class="text-xs text-green-500 font-medium hidden items-center gap-1">
+          <span class="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span> AI thinking…
+        </span>
+        <button onclick="clearGroupChat()"
+                class="text-slate-400 hover:text-red-500 transition-colors text-sm"
+                title="Clear chat history">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages area -->
+    <div id="chat-messages"
+         class="flex-1 overflow-y-auto p-5 space-y-4 scroll-smooth">
+      <!-- Populated by JS using mock data -->
+    </div>
+
+    <!-- Input area -->
+    <div class="border-t border-slate-100 p-4 flex-shrink-0 bg-slate-50">
+      <div class="flex items-end gap-3">
+        <div class="flex-1 relative">
+          <textarea id="message-input"
+                    rows="1"
+                    placeholder="Type a message, or @AI to ask the AI assistant…"
+                    class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12
+                           text-sm text-slate-700 placeholder-slate-400 focus:outline-none
+                           focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                           transition-all max-h-32 overflow-y-auto"
+                    onkeydown="handleGroupKeyDown(event)"
+                    oninput="autoResizeGroup(this)"></textarea>
+        </div>
+        <button id="send-btn"
+                onclick="sendGroupMessage()"
+                class="w-11 h-11 rounded-xl bg-primary-600 hover:bg-primary-700 active:bg-primary-800
+                       text-white flex items-center justify-center transition-colors shadow flex-shrink-0
+                       disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-paper-plane text-sm" id="send-icon"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mt-2 text-center">
+        Use <strong>@AI</strong> to invoke the AI assistant • AI responses are based on {{ group.course_code }} course materials
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const GROUP_ID = "{{ group.id }}";
+  const GROUP_COURSE_CODE = "{{ group.course_code }}";
+</script>
+<script src="{{ url_for('static', filename='js/group_chat.js') }}"></script>
+{% endblock %}
