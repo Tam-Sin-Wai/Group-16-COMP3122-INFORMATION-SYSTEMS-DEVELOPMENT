@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Padlet Discussions – EduAI{% endblock %}
-{% block page_title %}Padlet Discussions{% endblock %}
+{% block title %}Class Discussions – EduAI{% endblock %}
+{% block page_title %}Class Discussions{% endblock %}
 
 {% block content %}
 <div class="placeholder-page">
@@ -8,10 +8,10 @@
     <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-comments text-3xl"></i>
     </div>
-    <h2 class="text-2xl font-bold mb-2">Padlet Discussions</h2>
+    <h2 class="text-2xl font-bold mb-2">Class Discussions</h2>
     <p class="text-teal-100 text-sm max-w-md mx-auto">
-      Engage with your classmates and lecturers through structured group discussions,
-      e-consultations, and collaborative project boards.
+      Engage with your classmates and lecturers through structured whole-class discussions,
+      e-consultations, and teacher-moderated Q&amp;A boards.
     </p>
     <div class="mt-4 inline-flex items-center gap-2 bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-full">
       <i class="fa-solid fa-clock"></i> Coming Soon – Backend Under Development
@@ -21,17 +21,17 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
       <div class="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-people-group text-teal-600"></i>
+        <i class="fa-solid fa-chalkboard-user text-teal-600"></i>
       </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Group Projects</h3>
-      <p class="text-sm text-slate-500">Collaborate on group projects with shared boards and real-time updates.</p>
+      <h3 class="font-semibold text-slate-800 mb-1">Teacher-Led Boards</h3>
+      <p class="text-sm text-slate-500">Teachers post discussion topics; students reply and upvote the best responses.</p>
     </div>
     <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
       <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3">
         <i class="fa-solid fa-robot text-indigo-600"></i>
       </div>
       <h3 class="font-semibold text-slate-800 mb-1">AI Discussion Summaries</h3>
-      <p class="text-sm text-slate-500">The Virtual Teacher can summarise ongoing Padlet discussions for quick catch-ups.</p>
+      <p class="text-sm text-slate-500">The Virtual Teacher can summarise ongoing discussions for quick catch-ups.</p>
     </div>
     <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
       <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
@@ -49,10 +49,10 @@
     </div>
     <div class="divide-y divide-slate-100 opacity-70">
       {% set boards = [
-        {"title": "GenAI in Information Systems – Ethics & Impact", "course": "COMP3122", "posts": 24, "members": 18, "updated": "2 hours ago", "tag": "Group Discussion"},
+        {"title": "GenAI in Information Systems – Ethics & Impact", "course": "COMP3122", "posts": 24, "members": 18, "updated": "2 hours ago", "tag": "Class Discussion"},
         {"title": "AI Model Bias – Case Studies", "course": "COMP3201", "posts": 15, "members": 12, "updated": "1 day ago", "tag": "Assignment Support"},
         {"title": "Database Normalisation Q&A", "course": "COMP3301", "posts": 9, "members": 20, "updated": "3 days ago", "tag": "E-Consultation"},
-        {"title": "Week 4 Lecture Recap & Questions", "course": "COMP3122", "posts": 31, "members": 18, "updated": "5 hours ago", "tag": "Lecture Discussion"},
+        {"title": "Week 4 Lecture Recap & Questions", "course": "COMP3122", "posts": 31, "members": 18, "updated": "5 hours ago", "tag": "Lecture Q&A"},
       ] %}
       {% for b in boards %}
       <div class="flex items-start gap-4 px-6 py-4 hover:bg-slate-50 cursor-not-allowed">

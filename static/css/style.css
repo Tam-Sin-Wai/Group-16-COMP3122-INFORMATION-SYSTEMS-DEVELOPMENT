@@ -113,3 +113,43 @@ body {
   opacity: 1;
   transition: opacity 0.2s ease;
 }
+
+/* ── Group chat – peer message bubble ─────────────────────────────── */
+.chat-bubble-peer {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border-radius: 0 1rem 1rem 1rem;
+  padding: 0.75rem 1rem;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+.chat-bubble-peer p { font-size: 0.875rem; }
+
+.chat-bubble-peer strong { font-weight: 600; }
+
+.chat-bubble-peer ul,
+.chat-bubble-peer ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.chat-bubble-peer li { margin-bottom: 0.25rem; }
+
+.chat-bubble-peer code {
+  background-color: #e2e8f0;
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+  font-size: 0.8em;
+  font-family: ui-monospace, monospace;
+}
+
+/* ── Group chat messages scrollbar ───────────────────────────────── */
+#chat-messages::-webkit-scrollbar { width: 5px; }
+#chat-messages::-webkit-scrollbar-track { background: transparent; }
+#chat-messages::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 99px;
+}

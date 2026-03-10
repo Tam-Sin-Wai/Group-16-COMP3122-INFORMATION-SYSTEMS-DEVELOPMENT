@@ -1,8 +1,21 @@
-# EduAI – GenAI Learning Platform
+# EduAI – AI-Powered Personalised Learning Platform
 
 **Group 16 · COMP3122 Information Systems Development · 2025/26 Semester 2**
 
-A student-centred, personalized, and interactive learning platform integrated with Generative AI.
+A teacher-facilitated, student-centred, personalised, and interactive learning platform
+powered by Generative AI — enabling teachers to deliver adaptive learning experiences at scale.
+
+---
+
+## Platform Vision
+
+EduAI empowers teachers to create meaningful, personalised learning journeys for every student.
+Rather than a passive content repository, the platform actively facilitates:
+
+- 🎓 **Personalised AI tutoring** – students get course-specific answers from a virtual teacher trained on actual course materials
+- 👥 **Teacher-assigned study groups** – teachers group students for projects; each group gets its own AI-assisted chat room
+- 💬 **AI in the chat** – students can `@AI` in any group chat to get instant, context-aware answers from course materials
+- 📊 **Progress visibility** – last-online status, assignment tracking, and grade overviews for informed teacher interventions
 
 ---
 
@@ -11,19 +24,29 @@ A student-centred, personalized, and interactive learning platform integrated wi
 | Feature | Status |
 |---|---|
 | **Virtual Teacher** (AI chat per course) | ✅ Implemented |
+| **Study Groups** (teacher-assigned, with group chat) | ✅ Implemented |
+| **@AI in Group Chat** (course-aware AI assistant) | ✅ Implemented |
+| **Member last-online status** in group chat | ✅ Implemented |
 | Course Materials viewer | 🔜 Coming soon |
 | Assignments tracker | 🔜 Coming soon |
 | Grades overview | 🔜 Coming soon |
-| Padlet Discussions | 🔜 Coming soon |
+| Class Discussions board | 🔜 Coming soon |
 
 ### Virtual Teacher
 Powered by OpenAI GPT-4o-mini, the virtual teacher draws context from:
 - Lecture note summaries
 - Lecture recording transcripts
 - Assignment guidelines
-- Padlet discussion threads
+- Class discussion threads
 
 Students select their course and the AI provides accurate, context-specific responses to support their learning journey.
+
+### Study Groups
+Teachers create project groups per assignment, and students are auto-assigned or manually placed.
+Each group gets:
+- A persistent **group chat room** visible to all members
+- **Last-online indicators** per student (Online now / X min ago / X hours ago)
+- An embedded **AI assistant** — type `@AI <question>` to invoke it in any group message
 
 ---
 
@@ -89,20 +112,24 @@ Visit `http://localhost:5000` in your browser.
 
 ```
 ├── api/
-│   └── index.py          # Flask application (Vercel entry point)
+│   └── index.py              # Flask application (Vercel entry point)
 ├── templates/
-│   ├── base.html          # Base layout with sidebar navigation
-│   ├── index.html         # Dashboard
-│   ├── virtual_teacher.html  # AI chat page
-│   ├── materials.html     # Course Materials (placeholder)
-│   ├── assignments.html   # Assignments (placeholder)
-│   ├── grades.html        # Grades (placeholder)
-│   └── padlet.html        # Padlet Discussions (placeholder)
+│   ├── base.html              # Base layout with sidebar navigation
+│   ├── index.html             # Dashboard
+│   ├── virtual_teacher.html   # AI chat page (per course)
+│   ├── groups.html            # Study groups listing
+│   ├── group_chat.html        # Individual group chat with @AI support
+│   ├── materials.html         # Course Materials (placeholder)
+│   ├── assignments.html       # Assignments (placeholder)
+│   ├── grades.html            # Grades (placeholder)
+│   └── padlet.html            # Class Discussions (placeholder)
 ├── static/
-│   ├── css/style.css      # Custom styles
-│   └── js/chat.js         # Chat interface logic
+│   ├── css/style.css          # Custom styles
+│   ├── js/chat.js             # Virtual Teacher chat logic
+│   └── js/group_chat.js       # Group chat logic (@AI support)
 ├── supabase/
-│   └── schema.sql         # Supabase database schema
+│   └── schema.sql             # Supabase database schema (incl. study_groups)
+├── PROGRESS.md                # Developer task checklist
 ├── requirements.txt
 ├── vercel.json
 └── .env.example
