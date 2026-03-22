@@ -8,6 +8,29 @@ Course-aware learning platform prototype with GenAI virtual teacher and file upl
 - Upload Center for course knowledge base files
 - File list, preview, rename, delete, and quick summary
 - Placeholder UI blocks for future modules (Assignments, Padlet Insights, Study Group Hub)
+- Clibot Edu (teacher activity generator) with multi-mode test/game rendering
+
+## Clibot Edu generation modes
+
+Clibot Edu can generate the following test/activity types from teacher prompts:
+
+- `quiz` (multiple-choice Q&A)
+- `matching` (term-definition matching)
+- `ordering` (sequence/timeline arrangement)
+- `fill-blank` (cloze style completion)
+- `scenario` (branching decision path)
+- `speed-challenge` (timed quick-response rounds)
+- `classification` (categorize items into groups)
+- `cause-effect` (cause/effect chain alignment)
+- `map-label` (labeling points/diagram zones)
+- `memory` (flip-card concept matching)
+- `debate` (claim + evidence selection)
+- `team-battle` (team score-based challenge)
+
+Notes:
+
+- Escape-room mode was removed from Clibot Edu.
+- In the current mock implementation, mode detection is keyword-based and AI API integration can be plugged into the existing placeholder function in `app/page.tsx`.
 
 ## New MVP planning and backend scaffold
 
