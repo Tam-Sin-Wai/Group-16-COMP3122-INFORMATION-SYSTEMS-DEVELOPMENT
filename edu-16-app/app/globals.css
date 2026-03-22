@@ -393,11 +393,12 @@ td {
 .teacher-test-section {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: minmax(320px, 34%) 1fr;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 14px;
   padding: 0;
   overflow: hidden;
   order: -1;
+  align-items: stretch;
 }
 
 .hero {
@@ -553,6 +554,8 @@ td {
   grid-template-rows: auto 1fr;
   gap: 10px;
   min-height: 0;
+  min-width: 280px;
+  border-left: 1px solid #ece5d8;
 }
 
 .teacher-test-header {
@@ -1044,6 +1047,10 @@ td {
   .teacher-test-left {
     border-right: 0;
     border-bottom: 1px solid #ece5d8;
+  }
+
+  .teacher-test-right {
+    border-left: 0;
   }
 
   .teacher-test-prompt-actions {
