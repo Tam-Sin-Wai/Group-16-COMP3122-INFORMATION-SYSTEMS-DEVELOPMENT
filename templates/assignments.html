@@ -10,43 +10,67 @@
     </div>
     <h2 class="text-2xl font-bold mb-2">Assignments</h2>
     <p class="text-green-100 text-sm max-w-md mx-auto">
-      Track your assignments, deadlines, and submission status. Get AI guidance on
-      requirements and assessment criteria.
+      Track your assignments, deadlines, and submission status. Get AI guidance on requirements and assessment criteria.
     </p>
-    <div class="mt-4 inline-flex items-center gap-2 bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-full">
-      <i class="fa-solid fa-clock"></i> Coming Soon – Backend Under Development
+  </div>
+
+  <!-- Filter and Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Total Assignments</div>
+          <div class="text-3xl font-bold text-slate-800 mt-1">7</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+          <i class="fa-solid fa-list text-slate-600"></i>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">In Progress</div>
+          <div class="text-3xl font-bold text-amber-600 mt-1">2</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+          <i class="fa-solid fa-hourglass-half text-amber-600"></i>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Not Started</div>
+          <div class="text-3xl font-bold text-slate-600 mt-1">5</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+          <i class="fa-solid fa-circle-exclamation text-slate-600"></i>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Due Soon</div>
+          <div class="text-3xl font-bold text-rose-600 mt-1">3</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center">
+          <i class="fa-solid fa-calendar-xmark text-rose-600"></i>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-hourglass-half text-rose-600"></i>
-      </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Deadline Tracking</h3>
-      <p class="text-sm text-slate-500">Visual timeline of all upcoming deadlines with smart reminders.</p>
-    </div>
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-robot text-indigo-600"></i>
-      </div>
-      <h3 class="font-semibold text-slate-800 mb-1">AI Guidance</h3>
-      <p class="text-sm text-slate-500">Ask the Virtual Teacher for help with assignment requirements and structure.</p>
-    </div>
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-upload text-green-600"></i>
-      </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Submission Portal</h3>
-      <p class="text-sm text-slate-500">Submit work directly through the platform and track submission status.</p>
-    </div>
-  </div>
-
-  <!-- Mock assignment table -->
+  <!-- Assignments Table -->
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 class="font-semibold text-slate-800">Current Assignments</h3>
-      <span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">UI Preview Only</span>
+      <h3 class="font-semibold text-slate-800">Assignment Tracker</h3>
+      <div class="flex gap-2">
+        <button class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">
+          <i class="fa-solid fa-filter text-xs mr-1"></i> Filter
+        </button>
+      </div>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -55,37 +79,52 @@
             <th class="px-6 py-3">Assignment</th>
             <th class="px-6 py-3">Course</th>
             <th class="px-6 py-3">Due Date</th>
+            <th class="px-6 py-3">Max Marks</th>
             <th class="px-6 py-3">Status</th>
             <th class="px-6 py-3">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 opacity-70">
+        <tbody class="divide-y divide-slate-100">
           {% set assignments = [
-            {"title": "IS Development Project Proposal", "course": "COMP3122", "due": "Mar 15, 2026", "status": "in_progress"},
-            {"title": "AI Ethics Essay", "course": "COMP3201", "due": "Mar 20, 2026", "status": "not_started"},
-            {"title": "Database Design Project", "course": "COMP3301", "due": "Mar 25, 2026", "status": "not_started"},
-            {"title": "Group Presentation – GenAI Impact", "course": "COMP3122", "due": "Apr 5, 2026", "status": "not_started"},
-            {"title": "Neural Network Implementation", "course": "COMP3201", "due": "Apr 10, 2026", "status": "not_started"},
+            {"title": "IS Development Project Proposal", "course": "COMP3122", "due": "Mar 15, 2026", "max_marks": "100", "status": "in_progress", "status_label": "In Progress", "status_color": "bg-amber-100 text-amber-700"},
+            {"title": "AI Ethics Essay", "course": "COMP3201", "due": "Mar 20, 2026", "max_marks": "100", "status": "in_progress", "status_label": "In Progress", "status_color": "bg-amber-100 text-amber-700"},
+            {"title": "Database Design Exercise", "course": "COMP3122", "due": "Mar 25, 2026", "max_marks": "50", "status": "not_started", "status_label": "Not Started", "status_color": "bg-slate-100 text-slate-600"},
+            {"title": "Database Design Project", "course": "COMP3301", "due": "Mar 25, 2026", "max_marks": "100", "status": "not_started", "status_label": "Not Started", "status_color": "bg-slate-100 text-slate-600"},
+            {"title": "Group Presentation – GenAI Impact", "course": "COMP3122", "due": "Apr 5, 2026", "max_marks": "100", "status": "not_started", "status_label": "Not Started", "status_color": "bg-slate-100 text-slate-600"},
+            {"title": "Neural Network Implementation", "course": "COMP3201", "due": "Apr 10, 2026", "max_marks": "150", "status": "not_started", "status_label": "Not Started", "status_color": "bg-slate-100 text-slate-600"},
+            {"title": "Query Optimization Challenge", "course": "COMP3301", "due": "Apr 15, 2026", "max_marks": "75", "status": "not_started", "status_label": "Not Started", "status_color": "bg-slate-100 text-slate-600"},
           ] %}
           {% for a in assignments %}
-          <tr class="hover:bg-slate-50 cursor-not-allowed">
+          <tr class="hover:bg-slate-50">
             <td class="px-6 py-3.5 font-medium text-slate-800">{{ a.title }}</td>
             <td class="px-6 py-3.5 text-slate-500">{{ a.course }}</td>
-            <td class="px-6 py-3.5 text-slate-500">{{ a.due }}</td>
+            <td class="px-6 py-3.5 text-slate-500">
+              <div class="text-sm">{{ a.due }}</div>
+              <div class="text-xs text-red-600 font-medium">
+                {% if a.due == "Mar 15, 2026" or a.due == "Mar 20, 2026" %}
+                  <i class="fa-solid fa-clock text-xs mr-1"></i>Due in 2 weeks
+                {% elif a.due == "Mar 25, 2026" %}
+                  <i class="fa-solid fa-exclamation-triangle text-xs mr-1"></i>Due in 3 weeks
+                {% else %}
+                  <i class="fa-solid fa-calendar text-xs text-slate-400 mr-1"></i>{{ a.due }}
+                {% endif %}
+              </div>
+            </td>
+            <td class="px-6 py-3.5 text-slate-500">{{ a.max_marks }} marks</td>
             <td class="px-6 py-3.5">
-              <span class="px-2 py-1 rounded-full text-xs font-medium
-                {% if a.status == 'in_progress' %}bg-amber-100 text-amber-700
-                {% elif a.status == 'completed' %}bg-green-100 text-green-700
-                {% else %}bg-slate-100 text-slate-600{% endif %}">
-                {% if a.status == 'in_progress' %}In Progress
-                {% elif a.status == 'completed' %}Completed
-                {% else %}Not Started{% endif %}
+              <span class="px-2 py-1 rounded-full text-xs font-medium {{ a.status_color }}">
+                {{ a.status_label }}
               </span>
             </td>
             <td class="px-6 py-3.5">
-              <button class="text-primary-600 hover:text-primary-800 text-xs font-medium cursor-not-allowed opacity-50">
-                View Details
-              </button>
+              <div class="flex gap-2">
+                <button class="text-primary-600 hover:text-primary-800 text-xs font-medium hover:underline">
+                  View Details
+                </button>
+                <button class="text-slate-400 hover:text-slate-600">
+                  <i class="fa-solid fa-ellipsis-h text-xs"></i>
+                </button>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -93,5 +132,59 @@
       </table>
     </div>
   </div>
+
+  <!-- Assignment Details Card Example -->
+  <div class="mt-6">
+    <h3 class="font-semibold text-slate-800 mb-4">Quick Details – Next Deadline</h3>
+    <div class="bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl border border-rose-200 p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h4 class="text-lg font-semibold text-slate-800">IS Development Project Proposal</h4>
+          <p class="text-sm text-slate-600 mt-1">COMP3122 – Information Systems Development</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-700">In Progress</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Due Date</div>
+          <div class="text-lg font-semibold text-slate-800 mt-1">Mar 15, 2026</div>
+          <div class="text-xs text-rose-600 font-medium mt-0.5"><i class="fa-solid fa-clock text-xs mr-1"></i>14 days left</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Max Marks</div>
+          <div class="text-lg font-semibold text-slate-800 mt-1">100</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Progress</div>
+          <div class="mt-2">
+            <div class="text-sm font-semibold text-slate-800 mb-1">60%</div>
+            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div class="h-full bg-amber-500 rounded-full" style="width: 60%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-white rounded-lg mb-4">
+        <div class="text-sm text-slate-700">
+          <strong>Requirements:</strong> Submit a comprehensive proposal including problem statement, solution overview, system requirements, preliminary design diagrams, and project timeline. Max 2000 words. Assessment criteria: relevance, feasibility, clarity, proper APA referencing.
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition text-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs mr-2"></i> Open Assignment
+        </button>
+        <button class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition text-sm">
+          <i class="fa-solid fa-robot text-xs mr-2"></i> Ask AI Guide
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // Future: Fetch real assignments from /api/courses/{course_id}/assignments
+</script>
 {% endblock %}

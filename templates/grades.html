@@ -8,60 +8,245 @@
     <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-chart-bar text-3xl"></i>
     </div>
-    <h2 class="text-2xl font-bold mb-2">Grades</h2>
+    <h2 class="text-2xl font-bold mb-2">Grades & Performance</h2>
     <p class="text-rose-100 text-sm max-w-md mx-auto">
-      Monitor your academic performance across all courses with detailed breakdowns
-      and progress tracking.
+      Monitor your academic performance across all courses with detailed breakdowns, assignment grades, and progress tracking.
     </p>
-    <div class="mt-4 inline-flex items-center gap-2 bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-full">
-      <i class="fa-solid fa-clock"></i> Coming Soon – Backend Under Development
-    </div>
   </div>
 
+  <!-- Overall Stats -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     {% set stats = [
-      {"label": "GPA (Mock)", "value": "3.6", "color": "bg-rose-50 text-rose-700"},
-      {"label": "Courses", "value": "3", "color": "bg-slate-50 text-slate-700"},
-      {"label": "Completed", "value": "7", "color": "bg-green-50 text-green-700"},
-      {"label": "Pending", "value": "5", "color": "bg-amber-50 text-amber-700"},
+      {"label": "Overall GPA", "value": "3.6", "color": "bg-rose-50 text-rose-700", "icon": "fa-chart-line"},
+      {"label": "Courses Enrolled", "value": "3", "color": "bg-blue-50 text-blue-700", "icon": "fa-book"},
+      {"label": "Completed Assignments", "value": "7", "color": "bg-green-50 text-green-700", "icon": "fa-check-circle"},
+      {"label": "Pending Assignments", "value": "5", "color": "bg-amber-50 text-amber-700", "icon": "fa-hourglass-half"},
     ] %}
     {% for s in stats %}
-    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm {{ s.color }} opacity-70">
-      <div class="text-3xl font-bold">{{ s.value }}</div>
-      <div class="text-sm font-medium mt-1">{{ s.label }}</div>
+    <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm {{ s.color }}">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs font-medium">{{ s.label }}</div>
+          <div class="text-3xl font-bold mt-1">{{ s.value }}</div>
+        </div>
+        <div class="text-2xl opacity-30">
+          <i class="fa-solid {{ s.icon }}"></i>
+        </div>
+      </div>
     </div>
     {% endfor %}
   </div>
 
-  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+  <!-- Course Grades Overview -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 class="font-semibold text-slate-800">Grade Overview</h3>
-      <span class="text-xs bg-rose-100 text-rose-700 px-3 py-1 rounded-full font-medium">UI Preview Only</span>
+      <h3 class="font-semibold text-slate-800">Course Grade Breakdown</h3>
+      <button class="text-slate-400 hover:text-slate-600">
+        <i class="fa-solid fa-download text-sm"></i>
+      </button>
     </div>
-    <div class="divide-y divide-slate-100 opacity-70">
+    <div class="divide-y divide-slate-100">
       {% set courses = [
-        {"code": "COMP3122", "name": "Information Systems Development", "grade": "A-", "percentage": 87, "color": "bg-indigo-500"},
-        {"code": "COMP3201", "name": "Artificial Intelligence", "grade": "B+", "percentage": 78, "color": "bg-purple-500"},
-        {"code": "COMP3301", "name": "Database Management Systems", "grade": "A", "percentage": 92, "color": "bg-teal-500"},
+        {"code": "COMP3122", "name": "Information Systems Development", "grade": "A-", "percentage": 87, "color": "bg-indigo-500", "assignments_completed": "3/4", "status": "On track"},
+        {"code": "COMP3201", "name": "Artificial Intelligence", "grade": "B+", "percentage": 78, "color": "bg-purple-500", "assignments_completed": "2/4", "status": "Good progress"},
+        {"code": "COMP3301", "name": "Database Management Systems", "grade": "A", "percentage": 92, "color": "bg-teal-500", "assignments_completed": "2/3", "status": "Excellent"},
       ] %}
       {% for c in courses %}
-      <div class="px-6 py-5 hover:bg-slate-50 cursor-not-allowed">
-        <div class="flex items-center justify-between mb-2">
-          <div>
+      <div class="px-6 py-5 hover:bg-slate-50 transition">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex-1">
             <div class="font-medium text-slate-800">{{ c.name }}</div>
-            <div class="text-xs text-slate-500">{{ c.code }}</div>
+            <div class="text-xs text-slate-500 mt-0.5">{{ c.code }}</div>
           </div>
           <div class="text-right">
-            <div class="text-2xl font-bold text-slate-800">{{ c.grade }}</div>
+            <div class="text-3xl font-bold text-slate-800">{{ c.grade }}</div>
             <div class="text-xs text-slate-500">{{ c.percentage }}%</div>
           </div>
         </div>
-        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div class="h-full {{ c.color }} rounded-full" style="width: {{ c.percentage }}%"></div>
+
+        <!-- Progress Bar -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium text-slate-600">Grade Progress</span>
+            <span class="text-xs text-slate-500">{{ c.percentage }}%</span>
+          </div>
+          <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full {{ c.color }} rounded-full" style="width: {{ c.percentage }}%"></div>
+          </div>
+        </div>
+
+        <!-- Course Info Row -->
+        <div class="flex items-center justify-between text-sm">
+          <div class="flex items-center gap-4">
+            <div>
+              <span class="text-xs text-slate-500">Assignments: </span>
+              <span class="font-medium text-slate-700">{{ c.assignments_completed }}</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-500">Status: </span>
+              <span class="font-medium text-slate-700">{{ c.status }}</span>
+            </div>
+          </div>
+          <button class="text-primary-600 hover:text-primary-800 text-xs font-medium hover:underline">
+            View Details →
+          </button>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
+
+  <!-- Recent Assignment Grades -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <h3 class="font-semibold text-slate-800">Recent Grades</h3>
+      </div>
+      <div class="divide-y divide-slate-100">
+        <div class="px-6 py-4 hover:bg-slate-50">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <div class="font-medium text-slate-800 text-sm">IS Development Project Proposal</div>
+              <div class="text-xs text-slate-500 mt-0.5">COMP3122</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xl font-bold text-slate-800">87/100</div>
+              <div class="text-xs text-slate-500">87%</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-600 italic">Excellent proposal with clear problem statement and innovative solution design.</div>
+        </div>
+
+        <div class="px-6 py-4 hover:bg-slate-50">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <div class="font-medium text-slate-800 text-sm">AI Ethics Essay</div>
+              <div class="text-xs text-slate-500 mt-0.5">COMP3201</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xl font-bold text-slate-800">78/100</div>
+              <div class="text-xs text-slate-500">78%</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-600 italic">Well-researched essay with good framework application. Strengthen critical analysis in section 3.</div>
+        </div>
+
+        <div class="px-6 py-4 hover:bg-slate-50">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <div class="font-medium text-slate-800 text-sm">Database Design Exercise</div>
+              <div class="text-xs text-slate-500 mt-0.5">COMP3122</div>
+            </div>
+            <div class="text-right">
+              <div class="text-xl font-bold text-slate-800">45/50</div>
+              <div class="text-xs text-slate-500">90%</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-600 italic">Good ER diagram. Schema is correct but could improve normalization explanation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Insights -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100">
+        <h3 class="font-semibold text-slate-800">Performance Insights</h3>
+      </div>
+      <div class="px-6 py-4 space-y-4">
+        <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div class="flex items-start gap-3">
+            <div class="text-green-600 text-lg">
+              <i class="fa-solid fa-star"></i>
+            </div>
+            <div>
+              <div class="font-medium text-slate-800 text-sm">Strengths</div>
+              <div class="text-xs text-slate-600 mt-1">Strong performance in COMP3301 (Database), excellent design thinking in IS course.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <div class="flex items-start gap-3">
+            <div class="text-amber-600 text-lg">
+              <i class="fa-solid fa-lightbulb"></i>
+            </div>
+            <div>
+              <div class="font-medium text-slate-800 text-sm">Areas to Improve</div>
+              <div class="text-xs text-slate-600 mt-1">Consider deepening critical analysis in essays. More time on peer-reviewed sources may help.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="flex items-start gap-3">
+            <div class="text-blue-600 text-lg">
+              <i class="fa-solid fa-rocket"></i>
+            </div>
+            <div>
+              <div class="font-medium text-slate-800 text-sm">Next Steps</div>
+              <div class="text-xs text-slate-600 mt-1">Focus on Neural Network assignment. Aim for consistency across AI and IS assignments.</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition text-sm mt-2">
+          <i class="fa-solid fa-robot text-xs mr-2"></i> Get Personalized AI Feedback
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Grades -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800">Awaiting Grades</h3>
+      <span class="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-medium">3 pending</span>
+    </div>
+    <div class="divide-y divide-slate-100">
+      <div class="px-6 py-3.5 hover:bg-slate-50">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium text-slate-800 text-sm">Group Presentation – GenAI Impact</div>
+            <div class="text-xs text-slate-500">COMP3122 • Due: Apr 5, 2026</div>
+          </div>
+          <div class="text-right">
+            <span class="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+              <i class="fa-solid fa-hourglass-half"></i> Pending
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-3.5 hover:bg-slate-50">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium text-slate-800 text-sm">Neural Network Implementation</div>
+            <div class="text-xs text-slate-500">COMP3201 • Due: Apr 10, 2026</div>
+          </div>
+          <div class="text-right">
+            <span class="inline-flex items-center gap-1 text-xs text-slate-600 font-medium">
+              <i class="fa-solid fa-clock"></i> Not yet due
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-3.5 hover:bg-slate-50">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium text-slate-800 text-sm">Query Optimization Challenge</div>
+            <div class="text-xs text-slate-500">COMP3301 • Due: Apr 15, 2026</div>
+          </div>
+          <div class="text-right">
+            <span class="inline-flex items-center gap-1 text-xs text-slate-600 font-medium">
+              <i class="fa-solid fa-clock"></i> Not yet due
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // Future: Fetch real grades from /api/grades and /api/assignments/{id}/grade
+</script>
 {% endblock %}

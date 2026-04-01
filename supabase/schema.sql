@@ -145,3 +145,73 @@ create policy "Public read course_materials"
 -- Allow authenticated users to insert chat history (optional).
 create policy "Allow insert chat_history"
     on chat_history for insert with check (true);
+
+
+-- ── assignments ───────────────────────────────────────────────────────────
+-- Stores assignment information for each course.
+create table if not exists assignments (
+    id             uuid primary key default gen_random_uuid(),
+    course_id      uuid references courses(id) on delete cascade,
+    title          text not null,
+    description    text,
+    due_date       timestamptz not null,
+    max_marks      integer default 100,
+    created_by     text,                     -- teacher identifier
+    created_at     timestamptz default now()
+);
+
+create index if not exists idx_assignments_course_id on assignments(course_id);
+create index if not exists idx_assignments_due_date on assignments(due_date);
+
+
+-- ── student_assignments ───────────────────────────────────────────────────
+-- Tracks student assignment submissions and status.
+create table if not exists student_assignments (
+    id              uuid primary key default gen_random_uuid(),
+    assignment_id   uuid references assignments(id) on delete cascade,
+    student_id      text not null,           -- student identifier
+    student_name    text not null,
+    status          text not null default 'not_started' check (status in ('not_started', 'in_progress', 'submitted', 'graded')),
+    submission_date timestamptz,
+    submission_url  text,                    -- URL or file path
+    created_at      timestamptz default now(),
+    unique (assignment_id, student_id)
+);
+
+create index if not exists idx_student_assignments_assignment_id on student_assignments(assignment_id);
+create index if not exists idx_student_assignments_student_id on student_assignments(student_id);
+
+
+-- ── grades ────────────────────────────────────────────────────────────────
+-- Stores grades for student assignments.
+create table if not exists grades (
+    id                     uuid primary key default gen_random_uuid(),
+    student_assignment_id  uuid references student_assignments(id) on delete cascade,
+    marks_obtained         numeric(5,2),
+    feedback               text,
+    graded_by              text,              -- teacher identifier
+    graded_at              timestamptz default now()
+);
+
+create index if not exists idx_grades_student_assignment_id on grades(student_assignment_id);
+
+
+-- ── Enable RLS for new tables ──────────────────────────────────────────────
+alter table assignments         enable row level security;
+alter table student_assignments enable row level security;
+alter table grades              enable row level security;
+
+create policy "Public read assignments"
+    on assignments for select using (true);
+
+create policy "Public read student_assignments"
+    on student_assignments for select using (true);
+
+create policy "Public read grades"
+    on grades for select using (true);
+
+create policy "Allow insert student_assignments"
+    on student_assignments for insert with check (true);
+
+create policy "Allow insert grades"
+    on grades for insert with check (true);

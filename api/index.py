@@ -147,9 +147,30 @@ MOCK_GROUP_MESSAGES = {
 }
 
 MOCK_MATERIALS = {
-    "1": [
+    "1": [  # COMP3122 - Information Systems Development
         {
             "id": "m1",
+            "type": "lecture_notes",
+            "title": "IS Fundamentals – Lecture Slides Week 1",
+            "content": "PDF Placeholder: IS_Fundamentals_Week1.pdf",
+            "file_url": "/materials/IS_Fundamentals_Week1.pdf",
+        },
+        {
+            "id": "m1b",
+            "type": "lecture_notes",
+            "title": "SDLC and Project Management – Lecture Slides Week 2",
+            "content": "PDF Placeholder: SDLC_ProjectManagement_Week2.pdf",
+            "file_url": "/materials/SDLC_ProjectManagement_Week2.pdf",
+        },
+        {
+            "id": "m1c",
+            "type": "lecture_notes",
+            "title": "Systems Architecture & Design Patterns – Lecture Slides Week 3",
+            "content": "PDF Placeholder: SystemsArchitecture_Week3.pdf",
+            "file_url": "/materials/SystemsArchitecture_Week3.pdf",
+        },
+        {
+            "id": "m1d",
             "type": "lecture_notes",
             "title": "Week 1 – Introduction to Information Systems",
             "content": (
@@ -196,18 +217,38 @@ MOCK_MATERIALS = {
         {
             "id": "m5",
             "type": "transcript",
-            "title": "Lecture Recording Transcript – Week 3: Database Design",
+            "title": "Lecture Recording Transcript – Week 1: Enterprise Systems Overview",
             "content": (
-                "Transcript excerpt: '...Entity-Relationship diagrams help us visualise the data model "
-                "before we build it. Remember, normalisation is about removing redundancy. "
-                "First normal form requires atomic values. Second removes partial dependencies. "
-                "Third removes transitive dependencies. In practice, most systems are designed to 3NF...'"
+                "Transcript excerpt: '...Enterprise systems integrate all business processes into a single system. "
+                "Think of ERP systems like SAP or Oracle. They process transactions, manage inventory, and provide "
+                "real-time insights. The key to successful IS implementation is understanding user needs and change management...'"
             ),
         },
     ],
-    "2": [
+    "2": [  # COMP3201 - Artificial Intelligence
         {
             "id": "m6",
+            "type": "lecture_notes",
+            "title": "AI Foundations – Lecture Slides Week 1",
+            "content": "PDF Placeholder: AI_Foundations_Week1.pdf",
+            "file_url": "/materials/AI_Foundations_Week1.pdf",
+        },
+        {
+            "id": "m6b",
+            "type": "lecture_notes",
+            "title": "Machine Learning Algorithms – Lecture Slides Week 2",
+            "content": "PDF Placeholder: ML_Algorithms_Week2.pdf",
+            "file_url": "/materials/ML_Algorithms_Week2.pdf",
+        },
+        {
+            "id": "m6c",
+            "type": "lecture_notes",
+            "title": "Neural Networks & Deep Learning – Lecture Slides Week 3",
+            "content": "PDF Placeholder: NeuralNetworks_DeepLearning_Week3.pdf",
+            "file_url": "/materials/NeuralNetworks_DeepLearning_Week3.pdf",
+        },
+        {
+            "id": "m6d",
             "type": "lecture_notes",
             "title": "Week 1 – Introduction to Artificial Intelligence",
             "content": (
@@ -227,10 +268,41 @@ MOCK_MATERIALS = {
                 "proper APA referencing."
             ),
         },
+        {
+            "id": "m7b",
+            "type": "transcript",
+            "title": "Lecture Recording Transcript – Week 2: Classification & Clustering",
+            "content": (
+                "Transcript excerpt: '...Classification algorithms like decision trees and random forests are used "
+                "to categorize data. Clustering algorithms like K-means find patterns without labels. The key difference "
+                "is supervised versus unsupervised learning. Let me walk you through an example with iris flowers...'"
+            ),
+        },
     ],
-    "3": [
+    "3": [  # COMP3301 - Database Management Systems
         {
             "id": "m8",
+            "type": "lecture_notes",
+            "title": "Database Design & ER Modeling – Lecture Slides Week 1",
+            "content": "PDF Placeholder: DatabaseDesign_ER_Week1.pdf",
+            "file_url": "/materials/DatabaseDesign_ER_Week1.pdf",
+        },
+        {
+            "id": "m8b",
+            "type": "lecture_notes",
+            "title": "SQL & Query Optimization – Lecture Slides Week 2",
+            "content": "PDF Placeholder: SQL_QueryOptimization_Week2.pdf",
+            "file_url": "/materials/SQL_QueryOptimization_Week2.pdf",
+        },
+        {
+            "id": "m8c",
+            "type": "lecture_notes",
+            "title": "Database Normalization & ACID Properties – Lecture Slides Week 3",
+            "content": "PDF Placeholder: Normalization_ACID_Week3.pdf",
+            "file_url": "/materials/Normalization_ACID_Week3.pdf",
+        },
+        {
+            "id": "m8d",
             "type": "lecture_notes",
             "title": "Week 1 – Introduction to Database Systems",
             "content": (
@@ -249,6 +321,149 @@ MOCK_MATERIALS = {
                 "sample data, and a report. Assessment criteria: correctness of normalisation, "
                 "query efficiency, report clarity."
             ),
+        },
+        {
+            "id": "m9b",
+            "type": "transcript",
+            "title": "Lecture Recording Transcript – Week 2: Joins and Indexing",
+            "content": (
+                "Transcript excerpt: '...INNER JOIN returns only matching rows. LEFT JOIN keeps all rows from the left table. "
+                "When your queries slow down, check your indexes. A missing index on a frequently searched column can cause "
+                "table scans. Let's look at the EXPLAIN PLAN to understand query execution...'"
+            ),
+        },
+    ],
+}
+
+# Mock assignments keyed by course_id
+MOCK_ASSIGNMENTS = {
+    "1": [
+        {
+            "id": "a1",
+            "title": "IS Development Project Proposal",
+            "description": "Submit a comprehensive proposal for a new information system including problem statement, solution overview, requirements, and timeline.",
+            "due_date": "2026-03-15",
+            "max_marks": 100,
+            "status": "in_progress",  # Current student status
+        },
+        {
+            "id": "a2",
+            "title": "Group Presentation – GenAI Impact",
+            "description": "Group presentation on the impact and integration of generative AI in information systems. Slides + live demo required.",
+            "due_date": "2026-04-05",
+            "max_marks": 100,
+            "status": "not_started",
+        },
+        {
+            "id": "a3",
+            "title": "Database Design Exercise",
+            "description": "Design an ER diagram and normalised schema for a supply chain management system.",
+            "due_date": "2026-03-25",
+            "max_marks": 50,
+            "status": "not_started",
+        },
+    ],
+    "2": [
+        {
+            "id": "a4",
+            "title": "AI Ethics Essay",
+            "description": "Critical analysis essay (2500 words) on the ethical implications of AI in society. Minimum 8 peer-reviewed sources required.",
+            "due_date": "2026-03-20",
+            "max_marks": 100,
+            "status": "in_progress",
+        },
+        {
+            "id": "a5",
+            "title": "Neural Network Implementation",
+            "description": "Implement a neural network for image classification. Code submission + research paper required.",
+            "due_date": "2026-04-10",
+            "max_marks": 150,
+            "status": "not_started",
+        },
+    ],
+    "3": [
+        {
+            "id": "a6",
+            "title": "Database Design Project",
+            "description": "Design and implement a relational database. Deliverables: ER diagram, SQL DDL, sample data, and analysis report.",
+            "due_date": "2026-03-25",
+            "max_marks": 100,
+            "status": "not_started",
+        },
+        {
+            "id": "a7",
+            "title": "Query Optimization Challenge",
+            "description": "Optimize slow SQL queries on a provided dataset. Document optimizations and performance improvements.",
+            "due_date": "2026-04-15",
+            "max_marks": 75,
+            "status": "not_started",
+        },
+    ],
+}
+
+# Mock grades keyed by assignment_id
+MOCK_GRADES = {
+    "a1": {
+        "assignment_id": "a1",
+        "assignment_title": "IS Development Project Proposal",
+        "marks_obtained": 87,
+        "max_marks": 100,
+        "feedback": "Excellent proposal with clear problem statement and innovative solution design. Good use of diagrams.",
+        "graded_at": "2026-03-16",
+    },
+    "a2": {
+        "assignment_id": "a2",
+        "assignment_title": "Group Presentation – GenAI Impact",
+        "marks_obtained": None,
+        "max_marks": 100,
+        "feedback": "Not yet graded",
+        "graded_at": None,
+    },
+    "a3": {
+        "assignment_id": "a3",
+        "assignment_title": "Database Design Exercise",
+        "marks_obtained": 45,
+        "max_marks": 50,
+        "feedback": "Good ER diagram. Schema is correct but could improve normalization explanation.",
+        "graded_at": "2026-03-26",
+    },
+    "a4": {
+        "assignment_id": "a4",
+        "assignment_title": "AI Ethics Essay",
+        "marks_obtained": 78,
+        "max_marks": 100,
+        "feedback": "Well-researched essay with good framework application. Strengthen your critical analysis in section 3.",
+        "graded_at": "2026-03-21",
+    },
+}
+
+# Mock student grades overview (summary)
+MOCK_STUDENT_GRADES = {
+    "overall_gpa": 3.6,
+    "total_courses": 3,
+    "completed_assignments": 7,
+    "pending_assignments": 5,
+    "courses": [
+        {
+            "code": "COMP3122",
+            "name": "Information Systems Development",
+            "grade": "A-",
+            "percentage": 87,
+            "color": "bg-indigo-500",
+        },
+        {
+            "code": "COMP3201",
+            "name": "Artificial Intelligence",
+            "grade": "B+",
+            "percentage": 78,
+            "color": "bg-purple-500",
+        },
+        {
+            "code": "COMP3301",
+            "name": "Database Management Systems",
+            "grade": "A",
+            "percentage": 92,
+            "color": "bg-teal-500",
         },
     ],
 }
@@ -374,6 +589,60 @@ def api_course_materials(course_id: str):
             materials = MOCK_MATERIALS.get(course_id, [])
             return jsonify({"error": str(e), "materials": materials}), 200
     return jsonify({"materials": MOCK_MATERIALS.get(course_id, [])})
+
+
+@app.route("/api/courses/<course_id>/assignments")
+def api_course_assignments(course_id: str):
+    """Get all assignments for a course."""
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            result = (
+                supabase.table("assignments")
+                .select("*")
+                .eq("course_id", course_id)
+                .execute()
+            )
+            return jsonify({"assignments": result.data})
+        except Exception as e:
+            assignments = MOCK_ASSIGNMENTS.get(course_id, [])
+            return jsonify({"error": str(e), "assignments": assignments}), 200
+    return jsonify({"assignments": MOCK_ASSIGNMENTS.get(course_id, [])})
+
+
+@app.route("/api/grades")
+def api_student_grades():
+    """Get student's overall grades and performance."""
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            # In production, query grades based on authenticated user
+            result = supabase.table("grades").select("*").execute()
+            return jsonify({"grades": result.data})
+        except Exception as e:
+            return jsonify({"error": str(e), "grades": MOCK_STUDENT_GRADES}), 200
+    return jsonify({"grades": MOCK_STUDENT_GRADES})
+
+
+@app.route("/api/assignments/<assignment_id>/grade")
+def api_assignment_grade(assignment_id: str):
+    """Get grade for a specific assignment."""
+    supabase = get_supabase_client()
+    if supabase:
+        try:
+            # In production, query specific grade
+            result = (
+                supabase.table("grades")
+                .select("*, student_assignments(*)")
+                .eq("student_assignment_id", assignment_id)
+                .execute()
+            )
+            return jsonify({"grade": result.data[0] if result.data else None})
+        except Exception as e:
+            grade = MOCK_GRADES.get(assignment_id, {})
+            return jsonify({"error": str(e), "grade": grade}), 200
+    grade = MOCK_GRADES.get(assignment_id, {})
+    return jsonify({"grade": grade})
 
 
 @app.route("/api/groups")

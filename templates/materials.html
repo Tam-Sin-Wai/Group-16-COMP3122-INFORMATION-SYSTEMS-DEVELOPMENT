@@ -4,73 +4,241 @@
 
 {% block content %}
 <div class="placeholder-page">
-  <!-- Coming soon banner -->
+  <!-- Course selector and info banner -->
   <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-8 text-white text-center mb-6">
     <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-book-open text-3xl"></i>
     </div>
     <h2 class="text-2xl font-bold mb-2">Course Materials</h2>
     <p class="text-amber-100 text-sm max-w-md mx-auto">
-      Access lecture note summaries, recording transcripts, and supplementary resources
-      for all your enrolled courses in one place.
+      Access lecture notes, PDFs, recording transcripts, and supplementary resources for your enrolled courses.
     </p>
-    <div class="mt-4 inline-flex items-center gap-2 bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-full">
-      <i class="fa-solid fa-clock"></i> Coming Soon – Backend Under Development
+  </div>
+
+  <!-- Course Selector Dropdown -->
+  <div class="mb-6 flex items-center gap-3">
+    <label for="course-select" class="text-slate-700 font-medium">Select Course:</label>
+    <select id="course-select" class="px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-800 font-medium hover:border-slate-400 cursor-pointer transition">
+      <option value="">-- Choose a course --</option>
+      <option value="1">COMP3122 – Information Systems Development</option>
+      <option value="2">COMP3201 – Artificial Intelligence</option>
+      <option value="3">COMP3301 – Database Management Systems</option>
+    </select>
+  </div>
+
+  <!-- Course Info Card (shown when course selected) -->
+  <div id="course-info-card" class="mb-6 hidden">
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+      <h3 id="course-title" class="font-semibold text-slate-800 text-lg mb-2"></h3>
+      <p id="course-description" class="text-slate-600 text-sm"></p>
     </div>
   </div>
 
-  <!-- Feature preview -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-file-lines text-amber-600"></i>
+  <!-- Materials list by type (only shown when course selected) -->
+  <div id="materials-container" class="space-y-6 hidden">
+    <!-- Lecture Notes Section -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <i class="fa-solid fa-file-lines text-indigo-500 text-lg"></i>
+        <h3 class="font-semibold text-slate-800">Lecture Notes & Slides</h3>
       </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Lecture Notes</h3>
-      <p class="text-sm text-slate-500">Summarised lecture notes for each week, organised by topic and learning objective.</p>
+      <div id="lecture-notes-list" class="divide-y divide-slate-100">
+        <!-- Populated by JavaScript -->
+      </div>
     </div>
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-microphone-lines text-blue-600"></i>
+
+    <!-- Recording Transcripts Section -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <i class="fa-solid fa-microphone-lines text-blue-500 text-lg"></i>
+        <h3 class="font-semibold text-slate-800">Recording Transcripts</h3>
       </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Recording Transcripts</h3>
-      <p class="text-sm text-slate-500">Full transcripts of lecture recordings, searchable and linked to timestamps.</p>
+      <div id="transcripts-list" class="divide-y divide-slate-100">
+        <!-- Populated by JavaScript -->
+      </div>
     </div>
-    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
-      <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-3">
-        <i class="fa-solid fa-link text-green-600"></i>
+
+    <!-- Reference Resources Section -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <i class="fa-solid fa-link text-green-500 text-lg"></i>
+        <h3 class="font-semibold text-slate-800">Reference Links & Resources</h3>
       </div>
-      <h3 class="font-semibold text-slate-800 mb-1">Reference Links</h3>
-      <p class="text-sm text-slate-500">Curated reading lists and external resources recommended by your lecturers.</p>
+      <div id="resources-list" class="divide-y divide-slate-100">
+        <!-- Populated by JavaScript -->
+      </div>
     </div>
   </div>
 
-  <!-- Mock material list (UI only) -->
-  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 class="font-semibold text-slate-800">Preview – COMP3122 Materials</h3>
-      <span class="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-medium">UI Preview Only</span>
-    </div>
-    <div class="divide-y divide-slate-100">
-      {% set materials = [
-        {"icon": "fa-file-lines", "color": "text-indigo-500 bg-indigo-50", "title": "Week 1 – Introduction to Information Systems", "type": "Lecture Notes", "date": "Feb 3, 2026"},
-        {"icon": "fa-microphone-lines", "color": "text-blue-500 bg-blue-50", "title": "Week 1 Recording Transcript", "type": "Transcript", "date": "Feb 3, 2026"},
-        {"icon": "fa-file-lines", "color": "text-indigo-500 bg-indigo-50", "title": "Week 2 – SDLC and Agile Methods", "type": "Lecture Notes", "date": "Feb 10, 2026"},
-        {"icon": "fa-microphone-lines", "color": "text-blue-500 bg-blue-50", "title": "Week 2 Recording Transcript", "type": "Transcript", "date": "Feb 10, 2026"},
-        {"icon": "fa-file-lines", "color": "text-indigo-500 bg-indigo-50", "title": "Week 3 – Database Design Basics", "type": "Lecture Notes", "date": "Feb 17, 2026"},
-      ] %}
-      {% for m in materials %}
-      <div class="flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50 opacity-70 cursor-not-allowed">
-        <div class="w-9 h-9 rounded-lg {{ m.color }} flex items-center justify-center flex-shrink-0">
-          <i class="fa-solid {{ m.icon }} text-sm"></i>
+  <!-- Quick stats -->
+  <div id="stats-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 hidden">
+    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Materials Available</div>
+          <div id="stat-total" class="text-3xl font-bold text-slate-800 mt-1">0</div>
         </div>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium text-slate-800 truncate">{{ m.title }}</div>
-          <div class="text-xs text-slate-400">{{ m.type }} &bull; {{ m.date }}</div>
+        <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
+          <i class="fa-solid fa-book text-amber-600 text-lg"></i>
         </div>
-        <i class="fa-solid fa-lock text-slate-300 text-sm"></i>
       </div>
-      {% endfor %}
     </div>
+    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">PDFs</div>
+          <div id="stat-pdfs" class="text-3xl font-bold text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+          <i class="fa-solid fa-file-pdf text-red-600 text-lg"></i>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Other Materials</div>
+          <div id="stat-other" class="text-3xl font-bold text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+          <i class="fa-solid fa-file-circle-check text-green-600 text-lg"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Placeholder message when no course selected -->
+  <div id="no-course-message" class="text-center py-12">
+    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-arrow-up text-slate-400 text-2xl"></i>
+    </div>
+    <p class="text-slate-500 font-medium">Select a course above to view its materials</p>
   </div>
 </div>
+
+<script>
+  // Course data (matches backend MOCK_COURSES)
+  const courses = {
+    '1': {
+      code: 'COMP3122',
+      name: 'Information Systems Development',
+      description: 'A course on developing modern information systems using contemporary technologies and methodologies.'
+    },
+    '2': {
+      code: 'COMP3201',
+      name: 'Artificial Intelligence',
+      description: 'Foundations of AI including machine learning, neural networks, and intelligent agents.'
+    },
+    '3': {
+      code: 'COMP3301',
+      name: 'Database Management Systems',
+      description: 'Design, implementation, and management of relational and NoSQL databases.'
+    }
+  };
+
+  // Material icons and colors
+  const materialIcons = {
+    lecture_notes: { icon: 'fa-file-lines', color: 'text-indigo-500', bgColor: 'bg-indigo-50' },
+    transcript: { icon: 'fa-closed-captioning', color: 'text-blue-500', bgColor: 'bg-blue-50' },
+    assignment: { icon: 'fa-file-clipboard', color: 'text-purple-500', bgColor: 'bg-purple-50' },
+    padlet: { icon: 'fa-comments', color: 'text-green-500', bgColor: 'bg-green-50' }
+  };
+
+  // Handle course selection
+  document.getElementById('course-select').addEventListener('change', async function() {
+    const courseId = this.value;
+
+    if (!courseId) {
+      // Hide all containers
+      document.getElementById('materials-container').classList.add('hidden');
+      document.getElementById('stats-container').classList.add('hidden');
+      document.getElementById('course-info-card').classList.add('hidden');
+      document.getElementById('no-course-message').classList.remove('hidden');
+      return;
+    }
+
+    // Show course info
+    const course = courses[courseId];
+    document.getElementById('course-title').textContent = `${course.code} – ${course.name}`;
+    document.getElementById('course-description').textContent = course.description;
+    document.getElementById('course-info-card').classList.remove('hidden');
+    document.getElementById('no-course-message').classList.add('hidden');
+
+    // Fetch materials from API
+    try {
+      const response = await fetch(`/api/courses/${courseId}/materials`);
+      const data = await response.json();
+      const materials = data.materials || [];
+
+      // Organize materials by type
+      const lectureNotes = materials.filter(m => m.type === 'lecture_notes');
+      const transcripts = materials.filter(m => m.type === 'transcript');
+      const resources = materials.filter(m => m.type === 'padlet' || m.type === 'assignment');
+
+      // Render materials
+      renderMaterials('lecture-notes-list', lectureNotes);
+      renderMaterials('transcripts-list', transcripts);
+      renderMaterials('resources-list', resources);
+
+      // Update stats
+      updateStats(materials);
+
+      // Show containers
+      document.getElementById('materials-container').classList.remove('hidden');
+      document.getElementById('stats-container').classList.remove('hidden');
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+    }
+  });
+
+  // Render materials to a container
+  function renderMaterials(containerId, materials) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    if (materials.length === 0) {
+      container.innerHTML = '<div class="px-6 py-4 text-slate-500 text-sm">No materials available</div>';
+      return;
+    }
+
+    materials.forEach(material => {
+      const iconInfo = materialIcons[material.type] || materialIcons.lecture_notes;
+      const isPdf = material.file_url && material.file_url.endsWith('.pdf');
+
+      const materialEl = document.createElement('div');
+      materialEl.className = 'px-6 py-3.5 hover:bg-slate-50 transition';
+
+      materialEl.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="w-9 h-9 rounded-lg ${iconInfo.bgColor} flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid ${iconInfo.icon} ${iconInfo.color} text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-slate-800">${material.title}</div>
+            <div class="text-xs text-slate-400">
+              ${material.type.replace('_', ' ').charAt(0).toUpperCase() + material.type.slice(1)}
+              ${material.file_url ? ' • PDF' : ''}
+            </div>
+          </div>
+          <a href="${material.file_url || '#'}" class="text-primary-600 hover:text-primary-800 text-xs font-medium flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid ${isPdf ? 'fa-download' : 'fa-arrow-up-right'} text-xs"></i> ${isPdf ? 'Download' : 'View'}
+          </a>
+        </div>
+      `;
+
+      container.appendChild(materialEl);
+    });
+  }
+
+  // Update statistics
+  function updateStats(materials) {
+    const total = materials.length;
+    const pdfs = materials.filter(m => m.file_url && m.file_url.endsWith('.pdf')).length;
+    const other = total - pdfs;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-pdfs').textContent = pdfs;
+    document.getElementById('stat-other').textContent = other;
+  }
+</script>
 {% endblock %}
