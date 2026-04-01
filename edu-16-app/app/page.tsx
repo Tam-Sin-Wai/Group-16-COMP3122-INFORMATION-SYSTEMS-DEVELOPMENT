@@ -17,6 +17,46 @@ type ChatMessage = {
   createdAt: string;
 };
 
+type CourseMaterial = {
+  id: string;
+  course_id: string;
+  title: string;
+  type: 'lecture_summary' | 'transcript' | 'assignment_guideline' | 'padlet' | 'other';
+  description?: string;
+  url?: string;
+  file_path?: string;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type Assignment = {
+  id: string;
+  course_id: string;
+  title: string;
+  description?: string;
+  due_date: string;
+  max_marks: number;
+  status: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type Grade = {
+  id: string;
+  course_id: string;
+  user_id: string;
+  assignment_id?: string;
+  marks_obtained: number;
+  max_marks: number;
+  percentage: number;
+  feedback?: string;
+  graded_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type TestQuestion = {
   question: string;
   options: string[];
@@ -142,6 +182,14 @@ export default function Home() {
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const actionsRef = useRef<HTMLDivElement | null>(null);
 
+  // Course Materials, Assignments, and Grades State
+  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+  const [gradesLoading, setGradesLoading] = useState(false);
+
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -193,6 +241,9 @@ export default function Home() {
 
   useEffect(() => {
     fetchList();
+    fetchMaterials();
+    fetchAssignments();
+    fetchGrades();
   }, [selectedCourseId]);
 
   useEffect(() => {
@@ -254,6 +305,51 @@ export default function Home() {
       setStatus(`List error: ${message}`);
     } finally {
       setLoading(false);
+    }
+  }, [selectedCourseId]);
+
+  const fetchMaterials = useCallback(async () => {
+    setMaterialsLoading(true);
+    try {
+      const res = await fetch(`/api/courses/${encodeURIComponent(selectedCourseId)}/materials`);
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      setMaterials(json.materials || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('Materials fetch error:', message);
+    } finally {
+      setMaterialsLoading(false);
+    }
+  }, [selectedCourseId]);
+
+  const fetchAssignments = useCallback(async () => {
+    setAssignmentsLoading(true);
+    try {
+      const res = await fetch(`/api/courses/${encodeURIComponent(selectedCourseId)}/assignments`);
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      setAssignments(json.assignments || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('Assignments fetch error:', message);
+    } finally {
+      setAssignmentsLoading(false);
+    }
+  }, [selectedCourseId]);
+
+  const fetchGrades = useCallback(async () => {
+    setGradesLoading(true);
+    try {
+      const res = await fetch(`/api/courses/${encodeURIComponent(selectedCourseId)}/grades`);
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      setGrades(json.grades || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('Grades fetch error:', message);
+    } finally {
+      setGradesLoading(false);
     }
   }, [selectedCourseId]);
 
@@ -1509,25 +1605,105 @@ export default function Home() {
       </section>
 
       <section className="grid-secondary">
-        <article className="card placeholder">
-          <h3>Assignments Assistant</h3>
-          <p>
-            UI prepared. Backend coming next sprint: rubric alignment, submission planning, and integrity-safe
-            writing support.
-          </p>
+        <article className="card">
+          <div className="card-head">
+            <h3>Course Materials</h3>
+            <span>{materials.length} items</span>
+          </div>
+          {materialsLoading ? (
+            <p>Loading materials...</p>
+          ) : materials.length === 0 ? (
+            <p>No course materials available yet for {selectedCourse.code}.</p>
+          ) : (
+            <div className="materials-list">
+              {materials.map((material) => (
+                <div key={material.id} className="material-item">
+                  <div className="material-header">
+                    <strong>{material.title}</strong>
+                    <span className="material-type">{material.type}</span>
+                  </div>
+                  {material.description && <p className="material-desc">{material.description}</p>}
+                  <small className="material-date">
+                    {material.updated_at ? formatDateTime(material.updated_at) : formatDateTime(material.created_at)}
+                  </small>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
-        <article className="card placeholder">
-          <h3>Padlet Discussion Insights</h3>
-          <p>
-            UI prepared. Backend coming next sprint: discussion summarization, trend extraction, and e-consultation
-            highlights.
-          </p>
+        <article className="card">
+          <div className="card-head">
+            <h3>Assignments</h3>
+            <span>{assignments.length} active</span>
+          </div>
+          {assignmentsLoading ? (
+            <p>Loading assignments...</p>
+          ) : assignments.length === 0 ? (
+            <p>No assignments for {selectedCourse.code} at this time.</p>
+          ) : (
+            <div className="assignments-list">
+              {assignments.map((assignment) => {
+                const dueDate = new Date(assignment.due_date);
+                const now = new Date();
+                const daysLeft = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = daysLeft < 0;
+                const isUrgent = daysLeft >= 0 && daysLeft <= 7;
+
+                return (
+                  <div key={assignment.id} className="assignment-item">
+                    <div className="assignment-header">
+                      <strong>{assignment.title}</strong>
+                      {isOverdue && <span className="badge overdue">Overdue</span>}
+                      {isUrgent && !isOverdue && <span className="badge urgent">Due soon</span>}
+                    </div>
+                    {assignment.description && <p className="assignment-desc">{assignment.description}</p>}
+                    <div className="assignment-footer">
+                      <span>Due: {formatDateTime(assignment.due_date)}</span>
+                      <span>Max marks: {assignment.max_marks}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </article>
-        <article className="card placeholder">
-          <h3>Study Group Hub</h3>
-          <p>
-            UI prepared. Backend coming next sprint: group rooms, peer collaboration tracking, and @AI group support.
-          </p>
+        <article className="card">
+          <div className="card-head">
+            <h3>Grades Overview</h3>
+            <span>{grades.length} grades</span>
+          </div>
+          {gradesLoading ? (
+            <p>Loading grades...</p>
+          ) : grades.length === 0 ? (
+            <p>No grades available yet for {selectedCourse.code}.</p>
+          ) : (
+            <div className="grades-list">
+              {grades.map((grade) => (
+                <div key={grade.id} className="grade-item">
+                  <div className="grade-header">
+                    <strong>
+                      {grade.assignment_id ? 'Assignment Submission' : 'Course Grade'}
+                    </strong>
+                    <span className="grade-percentage">{grade.percentage}%</span>
+                  </div>
+                  <div className="grade-bar">
+                    <div
+                      className="grade-bar-fill"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, grade.percentage))}%`,
+                        backgroundColor:
+                          grade.percentage >= 80 ? '#10b981' : grade.percentage >= 60 ? '#f59e0b' : '#ef4444',
+                      }}
+                    />
+                  </div>
+                  <div className="grade-details">
+                    <span>Marks: {grade.marks_obtained}/{grade.max_marks}</span>
+                    {grade.feedback && <p className="grade-feedback">{grade.feedback}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
       </section>
 
