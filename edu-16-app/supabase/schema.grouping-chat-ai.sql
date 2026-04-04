@@ -116,6 +116,61 @@ create table if not exists public.grades (
   unique(user_id,assignment_id)
 );
 
+-- New tables for enhanced features
+create table if not exists public.assignment_materials (
+  assignment_id uuid not null references public.assignments(id) on delete cascade,
+  material_id uuid not null references public.course_materials(id) on delete cascade,
+  relevance_score int default 5 check (relevance_score between 1 and 10),
+  created_at timestamptz default now(),
+  primary key (assignment_id, material_id)
+);
+
+create table if not exists public.quizzes (
+  id uuid primary key default gen_random_uuid(),
+  course_id text not null references public.courses(id) on delete cascade,
+  title text not null,
+  description text,
+  type text not null default 'practice' check (type in ('practice','exam','revision')),
+  questions jsonb not null, -- Array of question objects
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.quiz_attempts (
+  id uuid primary key default gen_random_uuid(),
+  quiz_id uuid not null references public.quizzes(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  answers jsonb not null, -- User's answers
+  score int,
+  max_score int,
+  completed_at timestamptz,
+  created_at timestamptz default now(),
+  unique(quiz_id, user_id)
+);
+
+create table if not exists public.frequently_asked_questions (
+  id uuid primary key default gen_random_uuid(),
+  course_id text not null references public.courses(id) on delete cascade,
+  question text not null,
+  answer text,
+  frequency int default 1,
+  last_asked timestamptz default now(),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(course_id, question)
+);
+
+create table if not exists public.virtual_teacher_logs (
+  id uuid primary key default gen_random_uuid(),
+  course_id text not null references public.courses(id) on delete cascade,
+  user_id uuid references public.profiles(id),
+  question text not null,
+  response text,
+  response_source text default 'openai' check (response_source in ('openai','fallback')),
+  created_at timestamptz default now()
+);
+
 insert into public.profiles (id,email,display_name,role) values
 ('550e8400-e29b-41d4-a716-446655440001','teacher1@eduai.com','Dr Smith','teacher'),
 ('550e8400-e29b-41d4-a716-446655440002','teacher2@eduai.com','Prof Johnson','teacher'),

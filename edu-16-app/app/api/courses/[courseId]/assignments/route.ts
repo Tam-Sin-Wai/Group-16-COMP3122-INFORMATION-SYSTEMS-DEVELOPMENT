@@ -12,7 +12,20 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('assignments')
-      .select('*')
+      .select(`
+        *,
+        assignment_materials (
+          relevance_score,
+          course_materials (
+            id,
+            title,
+            type,
+            description,
+            url,
+            file_path
+          )
+        )
+      `)
       .eq('course_id', courseId)
       .eq('status', 'active')
       .order('due_date', { ascending: true });
