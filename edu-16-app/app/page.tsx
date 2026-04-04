@@ -1,6 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { DndContext, PointerSensor, closestCenter, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { COURSES } from '@/lib/courseData';
 
 type FileItem = {
@@ -97,6 +102,8 @@ type TestActivity = {
   id: string;
   title: string;
   instructionSummary: string;
+  parentActivityId?: string;
+  personalizationNote?: string;
   activityType: ActivityType;
   timeLimitSec?: number;
   questions?: TestQuestion[];
@@ -117,8 +124,48 @@ type TestActivity = {
   teamBattleQuestions?: TestQuestion[];
 };
 
-const TEST_SUBJECTS = ['Mathematics', 'English', 'Science', 'History', 'Computer Science'] as const;
-type TestSubject = (typeof TEST_SUBJECTS)[number];
+function SortableTimelineItem({ id, label }: { id: string; label: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+  };
+
+  return (
+    <li ref={setNodeRef} style={style} className="teacher-timeline-item" {...attributes} {...listeners}>
+      <span className="teacher-timeline-handle">⋮⋮</span>
+      <span>{label}</span>
+    </li>
+  );
+}
+
+function DraggableAnswer({ id, label, disabled }: { id: string; label: string; disabled?: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    disabled: Boolean(disabled),
+  });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: disabled ? 0.45 : isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <button ref={setNodeRef} style={style} className="teacher-draggable-answer" {...listeners} {...attributes} disabled={disabled}>
+      {label}
+    </button>
+  );
+}
+
+function MatchingDropZone({ id, prompt, matchedText }: { id: string; prompt: string; matchedText?: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`teacher-drop-zone ${isOver ? 'over' : ''}`}>
+      <strong>{prompt}</strong>
+      <span>{matchedText || 'Drop answer here'}</span>
+    </div>
+  );
+}
 
 function basename(path: string) {
   if (!path) return path;
@@ -156,6 +203,10 @@ function formatDuration(totalSec: number) {
   return `${mm}:${ss}`;
 }
 
+function getBaseActivityTitle(title: string) {
+  return title.replace(/\s+Personalization\s*\d+$/i, '').replace(/\s+Personalization$/i, '').trim();
+}
+
 export default function Home() {
   const [selectedCourseId, setSelectedCourseId] = useState(COURSES[0].id);
   const selectedCourse = useMemo(
@@ -178,10 +229,6 @@ export default function Home() {
   const [summaryText, setSummaryText] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const actionsRef = useRef<HTMLDivElement | null>(null);
-
   // Course Materials, Assignments, and Grades State
   const [materials, setMaterials] = useState<CourseMaterial[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -201,21 +248,15 @@ export default function Home() {
     },
   ]);
 
-  const [testSubject, setTestSubject] = useState<TestSubject>('Mathematics');
   const [testPromptInput, setTestPromptInput] = useState('');
   const [testStatus, setTestStatus] = useState('Waiting for instruction');
   const [testGenerating, setTestGenerating] = useState(false);
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
-  const [testStore, setTestStore] = useState<Record<TestSubject, TestActivity[]>>({
-    Mathematics: [],
-    English: [],
-    Science: [],
-    History: [],
-    'Computer Science': [],
-  });
+  const [testStore, setTestStore] = useState<Record<string, TestActivity[]>>({});
   const [matchingSelectedPrompt, setMatchingSelectedPrompt] = useState<string | null>(null);
   const [matchingMatchedIds, setMatchingMatchedIds] = useState<string[]>([]);
   const [matchingRightPool, setMatchingRightPool] = useState<MatchingPair[]>([]);
+  const [matchingAssignments, setMatchingAssignments] = useState<Record<string, string>>({});
   const [orderingCurrent, setOrderingCurrent] = useState<string[]>([]);
   const [orderingScore, setOrderingScore] = useState<{ correct: number; total: number } | null>(null);
   const [gameMessage, setGameMessage] = useState<string>('');
@@ -232,12 +273,21 @@ export default function Home() {
   const [causeEffectOrder, setCauseEffectOrder] = useState<string[]>([]);
   const [causeEffectScore, setCauseEffectScore] = useState<{ correct: number; total: number } | null>(null);
   const [mapSelections, setMapSelections] = useState<Record<string, string>>({});
+  const [activeMapLabel, setActiveMapLabel] = useState('');
   const [memoryFlipped, setMemoryFlipped] = useState<string[]>([]);
   const [memoryMatched, setMemoryMatched] = useState<string[]>([]);
   const [memoryDeck, setMemoryDeck] = useState<{ id: string; text: string }[]>([]);
   const [debateSelected, setDebateSelected] = useState<string[]>([]);
   const [teamScores, setTeamScores] = useState({ A: 0, B: 0 });
   const [teamQuestionIndex, setTeamQuestionIndex] = useState(0);
+  const [quizSelections, setQuizSelections] = useState<Record<number, number>>({});
+  const [quizScore, setQuizScore] = useState<{ correct: number; total: number } | null>(null);
+  const [speedCorrectCount, setSpeedCorrectCount] = useState(0);
+  const [speedComboPulse, setSpeedComboPulse] = useState(0);
+  const [activityScores, setActivityScores] = useState<Record<string, number>>({});
+  const [personalizeInput, setPersonalizeInput] = useState('');
+  const [personalizedStore, setPersonalizedStore] = useState<Record<string, TestActivity[]>>({});
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   useEffect(() => {
     fetchList();
@@ -245,19 +295,6 @@ export default function Home() {
     fetchAssignments();
     fetchGrades();
   }, [selectedCourseId]);
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      const target = e.target as Node | null;
-      if (!target) return;
-      if (actionsRef.current && !actionsRef.current.contains(target)) {
-        setOpenMenuFor(null);
-        setMenuPos(null);
-      }
-    }
-    window.addEventListener('mousedown', onDocClick);
-    return () => window.removeEventListener('mousedown', onDocClick);
-  }, []);
 
   const displayNames = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -403,9 +440,6 @@ export default function Home() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Delete error: ${message}`);
-    } finally {
-      setOpenMenuFor(null);
-      setMenuPos(null);
     }
   }
 
@@ -428,9 +462,6 @@ export default function Home() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus(`Rename error: ${message}`);
-    } finally {
-      setOpenMenuFor(null);
-      setMenuPos(null);
     }
   }
 
@@ -523,7 +554,7 @@ export default function Home() {
     }
   }
 
-  function buildActivityName(subject: TestSubject, promptText: string) {
+  function buildActivityName(subject: string, promptText: string) {
     const cleanPrompt = promptText.trim();
     const shortPrompt = cleanPrompt.length > 42 ? `${cleanPrompt.slice(0, 39)}...` : cleanPrompt;
     return `${subject} Test - ${shortPrompt}`;
@@ -547,14 +578,13 @@ export default function Home() {
     if (/(speed|lightning|rapid|quick)/.test(lower)) return 'speed-challenge';
     if (/(classification|classify|category|categorize|group)/.test(lower)) return 'classification';
     if (/(cause|effect|chain|logic)/.test(lower)) return 'cause-effect';
-    if (/(map|label|diagram|graph)/.test(lower)) return 'map-label';
     if (/(memory|flip|card)/.test(lower)) return 'memory';
     if (/(debate|argument|claim|evidence)/.test(lower)) return 'debate';
     if (/(team|battle|competition|versus|vs)/.test(lower)) return 'team-battle';
     return 'quiz';
   }
 
-  function createMockQuestions(subject: TestSubject, promptText: string): TestQuestion[] {
+  function createMockQuestions(subject: string, promptText: string): TestQuestion[] {
     return [
       {
         question: `What is the best answer to this ${subject.toLowerCase()} concept question based on the instruction?`,
@@ -586,85 +616,46 @@ export default function Home() {
     ];
   }
 
-  function createMockMatchingPairs(subject: TestSubject): MatchingPair[] {
-    const poolBySubject: Record<TestSubject, MatchingPair[]> = {
-      Mathematics: [
-        { id: 'm1', prompt: 'Pythagorean Theorem', answer: 'a^2 + b^2 = c^2' },
-        { id: 'm2', prompt: 'Derivative', answer: 'Instant rate of change' },
-        { id: 'm3', prompt: 'Mean', answer: 'Sum divided by count' },
-        { id: 'm4', prompt: 'Prime Number', answer: 'Divisible only by 1 and itself' },
-      ],
-      English: [
-        { id: 'e1', prompt: 'Metaphor', answer: 'Direct comparison without like/as' },
-        { id: 'e2', prompt: 'Thesis Statement', answer: 'Main claim of an essay' },
-        { id: 'e3', prompt: 'Synonym', answer: 'Word with similar meaning' },
-        { id: 'e4', prompt: 'Foreshadowing', answer: 'Hint about future events' },
-      ],
-      Science: [
-        { id: 's1', prompt: 'Photosynthesis', answer: 'Process plants use to make food' },
-        { id: 's2', prompt: 'Atom', answer: 'Smallest unit of an element' },
-        { id: 's3', prompt: 'Evaporation', answer: 'Liquid turning into gas' },
-        { id: 's4', prompt: 'Gravity', answer: 'Force pulling objects together' },
-      ],
-      History: [
-        { id: 'h1', prompt: 'Industrial Revolution', answer: 'Shift to machine-based production' },
-        { id: 'h2', prompt: 'Cold War', answer: 'Political tension without direct war' },
-        { id: 'h3', prompt: 'Democracy', answer: 'Government by the people' },
-        { id: 'h4', prompt: 'Renaissance', answer: 'Cultural rebirth in Europe' },
-      ],
-      'Computer Science': [
+  function createMockMatchingPairs(subject: string): MatchingPair[] {
+    if (subject.toLowerCase().includes('computer')) {
+      return [
         { id: 'c1', prompt: 'Variable', answer: 'Named storage for a value' },
         { id: 'c2', prompt: 'Loop', answer: 'Repeats a block of code' },
         { id: 'c3', prompt: 'Array', answer: 'Ordered list of values' },
         { id: 'c4', prompt: 'Function', answer: 'Reusable block of logic' },
-      ],
-    };
-    return poolBySubject[subject];
+      ];
+    }
+    return [
+      { id: 'g1', prompt: 'Key Concept', answer: `${subject} foundation principle` },
+      { id: 'g2', prompt: 'Core Skill', answer: `Applied ${subject.toLowerCase()} problem solving` },
+      { id: 'g3', prompt: 'Assessment Focus', answer: 'Reasoning with evidence' },
+      { id: 'g4', prompt: 'Common Mistake', answer: 'Skipping step-by-step analysis' },
+    ];
   }
 
-  function createMockOrderingItems(subject: TestSubject): string[] {
-    const poolBySubject: Record<TestSubject, string[]> = {
-      Mathematics: ['Read the problem', 'Identify known values', 'Apply formula', 'Calculate', 'Verify result'],
-      English: ['Read the prompt', 'Plan thesis', 'Draft body paragraphs', 'Revise structure', 'Proofread grammar'],
-      Science: ['Observe phenomenon', 'Form hypothesis', 'Design experiment', 'Collect data', 'Draw conclusion'],
-      History: ['Identify source', 'Determine context', 'Compare viewpoints', 'Evaluate evidence', 'Write argument'],
-      'Computer Science': ['Understand requirements', 'Design algorithm', 'Write code', 'Test edge cases', 'Refactor'],
-    };
-    return poolBySubject[subject];
+  function createMockOrderingItems(subject: string): string[] {
+    if (subject.toLowerCase().includes('computer')) {
+      return ['Understand requirements', 'Design algorithm', 'Write code', 'Test edge cases', 'Refactor'];
+    }
+    return ['Review instruction', `Identify ${subject.toLowerCase()} concepts`, 'Draft approach', 'Solve with steps', 'Check answer'];
   }
 
-  function createFillBlankMock(subject: TestSubject) {
-    const bySubject: Record<TestSubject, { sentence: string; answers: string[]; options: string[] }> = {
-      Mathematics: {
-        sentence: 'To solve a quadratic equation, first ___ the expression, then use the ___ formula.',
-        answers: ['factor', 'quadratic'],
-        options: ['factor', 'quadratic', 'ignore', 'simplify'],
-      },
-      English: {
-        sentence: 'A strong paragraph starts with a ___ sentence and includes supporting ___.',
-        answers: ['topic', 'details'],
-        options: ['topic', 'details', 'punctuation', 'title'],
-      },
-      Science: {
-        sentence: 'In the scientific method, we test a ___ by running an ___.',
-        answers: ['hypothesis', 'experiment'],
-        options: ['hypothesis', 'experiment', 'summary', 'reaction'],
-      },
-      History: {
-        sentence: 'Historians compare ___ and analyze ___ to build conclusions.',
-        answers: ['sources', 'evidence'],
-        options: ['sources', 'evidence', 'opinions', 'guesses'],
-      },
-      'Computer Science': {
+  function createFillBlankMock(subject: string) {
+    if (subject.toLowerCase().includes('computer')) {
+      return {
         sentence: 'A function takes ___ and returns an ___ value.',
         answers: ['input', 'output'],
         options: ['input', 'output', 'error', 'loop'],
-      },
+      };
+    }
+    return {
+      sentence: `A strong ${subject.toLowerCase()} response starts with ___ and includes supporting ___.`,
+      answers: ['key idea', 'evidence'],
+      options: ['key idea', 'evidence', 'guessing', 'unrelated details'],
     };
-    return bySubject[subject];
   }
 
-  function createScenarioNodes(subject: TestSubject): ScenarioNode[] {
+  function createScenarioNodes(subject: string): ScenarioNode[] {
     return [
       {
         id: 1,
@@ -698,48 +689,9 @@ export default function Home() {
     ];
   }
 
-  function createClassificationMock(subject: TestSubject) {
-    const bySubject: Record<
-      TestSubject,
-      { categories: string[]; items: { id: string; label: string; category: string }[] }
-    > = {
-      Mathematics: {
-        categories: ['Algebra', 'Geometry'],
-        items: [
-          { id: 'ma1', label: 'Linear equation', category: 'Algebra' },
-          { id: 'ma2', label: 'Triangle area', category: 'Geometry' },
-          { id: 'ma3', label: 'Polynomial', category: 'Algebra' },
-          { id: 'ma4', label: 'Circle radius', category: 'Geometry' },
-        ],
-      },
-      English: {
-        categories: ['Grammar', 'Literature'],
-        items: [
-          { id: 'en1', label: 'Verb tense', category: 'Grammar' },
-          { id: 'en2', label: 'Theme analysis', category: 'Literature' },
-          { id: 'en3', label: 'Subject-verb agreement', category: 'Grammar' },
-          { id: 'en4', label: 'Character arc', category: 'Literature' },
-        ],
-      },
-      Science: {
-        categories: ['Physics', 'Biology'],
-        items: [
-          { id: 'sc1', label: 'Force', category: 'Physics' },
-          { id: 'sc2', label: 'Cell membrane', category: 'Biology' },
-          { id: 'sc3', label: 'Velocity', category: 'Physics' },
-          { id: 'sc4', label: 'Photosynthesis', category: 'Biology' },
-        ],
-      },
-      History: {
-        categories: ['Political', 'Cultural'],
-        items: [
-          { id: 'hi1', label: 'Constitution reform', category: 'Political' },
-          { id: 'hi2', label: 'Art movement', category: 'Cultural' },
-          { id: 'hi3', label: 'Election law', category: 'Political' },
-          { id: 'hi4', label: 'Philosophy school', category: 'Cultural' },
-        ],
-      },
-      'Computer Science': {
+  function createClassificationMock(subject: string) {
+    if (subject.toLowerCase().includes('computer')) {
+      return {
         categories: ['Data', 'Control'],
         items: [
           { id: 'cs1', label: 'Array', category: 'Data' },
@@ -747,12 +699,20 @@ export default function Home() {
           { id: 'cs3', label: 'Object', category: 'Data' },
           { id: 'cs4', label: 'Loop', category: 'Control' },
         ],
-      },
+      };
+    }
+    return {
+      categories: ['Concept', 'Application'],
+      items: [
+        { id: 'g1', label: `${subject} definition`, category: 'Concept' },
+        { id: 'g2', label: `${subject} case study`, category: 'Application' },
+        { id: 'g3', label: 'Core terminology', category: 'Concept' },
+        { id: 'g4', label: 'Problem-solving steps', category: 'Application' },
+      ],
     };
-    return bySubject[subject];
   }
 
-  function createCauseEffectPairs(subject: TestSubject) {
+  function createCauseEffectPairs(subject: string) {
     return [
       { cause: `Strong foundation in ${subject.toLowerCase()} concepts`, effect: 'Higher confidence in solving tasks' },
       { cause: 'Regular formative feedback', effect: 'Faster learning adjustments' },
@@ -760,7 +720,7 @@ export default function Home() {
     ];
   }
 
-  function createMapPoints(subject: TestSubject) {
+  function createMapPoints(subject: string) {
     return [
       { id: 'p1', location: 'Point A', label: `${subject} Concept Hub` },
       { id: 'p2', location: 'Point B', label: 'Practice Zone' },
@@ -768,7 +728,7 @@ export default function Home() {
     ];
   }
 
-  function createDebateMock(subject: TestSubject) {
+  function createDebateMock(subject: string) {
     return {
       claim: `Schools should increase project-based ${subject.toLowerCase()} learning time.`,
       evidence: [
@@ -780,7 +740,7 @@ export default function Home() {
     };
   }
 
-  async function generateTestActivityFromAI(subject: TestSubject, promptText: string) {
+  async function generateTestActivityFromAI(subject: string, promptText: string) {
     // AI_API_PLACEHOLDER_TOKEN
     // Insert your AI API integration here and return:
     // { title, instructionSummary, activityType, questions?, matchingPairs?, orderingItems? }.
@@ -871,17 +831,6 @@ export default function Home() {
           return;
         }
 
-        if (activityType === 'map-label') {
-          resolve({
-            title: buildActivityName(subject, promptText),
-            instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
-            activityType,
-            timeLimitSec: 150,
-            mapPoints: createMapPoints(subject),
-          });
-          return;
-        }
-
         if (activityType === 'memory') {
           resolve({
             title: buildActivityName(subject, promptText),
@@ -939,7 +888,8 @@ export default function Home() {
     setTestStatus('Generating...');
 
     try {
-      const generated = await generateTestActivityFromAI(testSubject, instruction);
+      const subjectLabel = selectedCourse.name;
+      const generated = await generateTestActivityFromAI(subjectLabel, instruction);
       const newActivity: TestActivity = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         ...generated,
@@ -947,7 +897,7 @@ export default function Home() {
 
       setTestStore((prev) => ({
         ...prev,
-        [testSubject]: [newActivity, ...prev[testSubject]],
+        [selectedCourseId]: [newActivity, ...(prev[selectedCourseId] || [])],
       }));
       setActiveTestId(newActivity.id);
       setTestPromptInput('');
@@ -959,13 +909,68 @@ export default function Home() {
     }
   }
 
-  const currentSubjectActivities = testStore[testSubject];
+  const currentCourseActivities = testStore[selectedCourseId] || [];
+  const currentPersonalizedActivities = personalizedStore[selectedCourseId] || [];
+  const currentActivityEntries = currentCourseActivities.flatMap((activity) => [
+    { activity, variant: 'original' as const },
+    ...currentPersonalizedActivities
+      .filter((item) => item.parentActivityId === activity.id)
+      .map((item) => ({ activity: item, variant: 'personalized' as const })),
+  ]);
   const activeTestActivity =
-    currentSubjectActivities.find((activity) => activity.id === activeTestId) || currentSubjectActivities[0] || null;
+    currentActivityEntries.find((entry) => entry.activity.id === activeTestId)?.activity ||
+    currentActivityEntries[0]?.activity ||
+    null;
+  const scoredCourseActivities = currentCourseActivities
+    .map((activity) => ({ activity, score: activityScores[activity.id] }))
+    .filter((entry): entry is { activity: TestActivity; score: number } => typeof entry.score === 'number');
+  const averageCourseScore =
+    scoredCourseActivities.length > 0
+      ? Math.round(scoredCourseActivities.reduce((sum, entry) => sum + entry.score, 0) / scoredCourseActivities.length)
+      : null;
+
+  function recordActivityScore(activityId: string, score: number) {
+    setActivityScores((prev) => ({
+      ...prev,
+      [activityId]: Math.round(Math.max(0, Math.min(100, score))),
+    }));
+  }
+
+  async function handlePersonalizeActivity() {
+    if (!activeTestActivity) return;
+    const note = personalizeInput.trim();
+    if (!note) {
+      setTestStatus('Please enter personalization content');
+      return;
+    }
+
+    const rootParentId = activeTestActivity.parentActivityId || activeTestActivity.id;
+    const nextVersion =
+      currentPersonalizedActivities.filter((item) => item.parentActivityId === rootParentId).length + 1;
+    const baseTitle = getBaseActivityTitle(activeTestActivity.title);
+
+    const personalizedActivity: TestActivity = {
+      ...activeTestActivity,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: `${baseTitle} Personalization ${nextVersion}`,
+      instructionSummary: `Personalization ${nextVersion} -- ${note}`,
+      parentActivityId: rootParentId,
+      personalizationNote: note,
+    };
+
+    setPersonalizedStore((prev) => ({
+      ...prev,
+      [selectedCourseId]: [personalizedActivity, ...(prev[selectedCourseId] || [])],
+    }));
+    setActiveTestId(personalizedActivity.id);
+    setPersonalizeInput('');
+    setTestStatus('Personalized activity created');
+  }
 
   useEffect(() => {
     setMatchingSelectedPrompt(null);
     setMatchingMatchedIds([]);
+    setMatchingAssignments({});
     setOrderingScore(null);
     setGameMessage('');
     setShowWinBadge(false);
@@ -978,12 +983,15 @@ export default function Home() {
     setClassifySelections({});
     setCauseEffectScore(null);
     setMapSelections({});
+    setActiveMapLabel('');
     setMemoryFlipped([]);
     setMemoryMatched([]);
     setMemoryDeck([]);
     setDebateSelected([]);
     setTeamScores({ A: 0, B: 0 });
     setTeamQuestionIndex(0);
+    setQuizSelections({});
+    setQuizScore(null);
 
     if (!activeTestActivity) {
       setMatchingRightPool([]);
@@ -1096,6 +1104,7 @@ export default function Home() {
       if (nextMatched.length === total) {
         setTimerRunning(false);
         setShowWinBadge(true);
+        recordActivityScore(activeTestActivity.id, 100);
         setGameMessage('Great job! All pairs matched.');
       } else {
         setGameMessage('Correct match!');
@@ -1104,6 +1113,52 @@ export default function Home() {
     }
 
     setGameMessage('Not a match. Try another answer.');
+  }
+
+  function handleMatchingDragEnd(event: DragEndEvent) {
+    if (!activeTestActivity || activeTestActivity.activityType !== 'matching') return;
+    const draggedId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : '';
+    if (!draggedId.startsWith('answer-') || !overId.startsWith('prompt-')) return;
+
+    const answerId = draggedId.replace('answer-', '');
+    const promptId = overId.replace('prompt-', '');
+    const pairs = activeTestActivity.matchingPairs || [];
+    const nextAssignments = { ...matchingAssignments, [promptId]: answerId };
+    setMatchingAssignments(nextAssignments);
+
+    const matchedIds = pairs.filter((pair) => nextAssignments[pair.id] === pair.id).map((pair) => pair.id);
+    setMatchingMatchedIds(matchedIds);
+    recordActivityScore(activeTestActivity.id, pairs.length > 0 ? (matchedIds.length / pairs.length) * 100 : 0);
+
+    if (matchedIds.length === pairs.length && pairs.length > 0) {
+      setTimerRunning(false);
+      setShowWinBadge(true);
+      setGameMessage('Great job! All pairs matched.');
+      return;
+    }
+    setGameMessage('Answer dropped. Continue matching.');
+  }
+
+  function handleOrderingDragEnd(event: DragEndEvent) {
+    if (!activeTestActivity || activeTestActivity.activityType !== 'ordering') return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderingCurrent.indexOf(String(active.id));
+    const newIndex = orderingCurrent.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    setOrderingCurrent((prev) => arrayMove(prev, oldIndex, newIndex));
+    setOrderingScore(null);
+    setGameMessage('Timeline order updated.');
+  }
+
+  function handleMapHotspotClick(pointId: string) {
+    if (!activeMapLabel) {
+      setGameMessage('Pick a label chip first, then click a hotspot.');
+      return;
+    }
+    setMapSelections((prev) => ({ ...prev, [pointId]: activeMapLabel }));
   }
 
   function moveOrderingItem(index: number, direction: 'up' | 'down') {
@@ -1134,6 +1189,7 @@ export default function Home() {
       if (item === expected[index]) correct += 1;
     });
     setOrderingScore({ correct, total: expected.length });
+    recordActivityScore(activeTestActivity.id, expected.length > 0 ? (correct / expected.length) * 100 : 0);
     if (correct === expected.length) {
       setTimerRunning(false);
       setShowWinBadge(true);
@@ -1145,6 +1201,13 @@ export default function Home() {
 
   function resetCurrentGame() {
     if (!activeTestActivity) return;
+
+    if (activeTestActivity.activityType === 'quiz') {
+      setQuizSelections({});
+      setQuizScore(null);
+      setGameMessage('Quiz reset.');
+      return;
+    }
 
     if (activeTestActivity.activityType === 'matching') {
       const pairs = activeTestActivity.matchingPairs || [];
@@ -1189,6 +1252,7 @@ export default function Home() {
       setSpeedIndex(0);
       setSpeedScore(0);
       setSpeedStreak(0);
+      setSpeedComboPulse(0);
       setTimeLeftSec(activeTestActivity.timeLimitSec || 0);
       setTimerRunning((activeTestActivity.timeLimitSec || 0) > 0);
       setGameMessage('Speed challenge reset.');
@@ -1261,8 +1325,10 @@ export default function Home() {
     if (correct === answers.length) {
       setShowWinBadge(true);
       setTimerRunning(false);
+      recordActivityScore(activeTestActivity.id, answers.length > 0 ? 100 : 0);
       setGameMessage('Excellent! All blanks are correct.');
     } else {
+      recordActivityScore(activeTestActivity.id, answers.length > 0 ? (correct / answers.length) * 100 : 0);
       setGameMessage(`You have ${correct}/${answers.length} correct blanks.`);
     }
   }
@@ -1278,6 +1344,7 @@ export default function Home() {
     if (nextNode && nextNode.choices.length === 0) {
       setShowWinBadge(true);
       setTimerRunning(false);
+      recordActivityScore(activeTestActivity.id, 100);
       setGameMessage('Scenario completed with a teaching-friendly path.');
     }
   }
@@ -1286,17 +1353,22 @@ export default function Home() {
     if (!activeTestActivity || activeTestActivity.activityType !== 'speed-challenge') return;
     const total = (activeTestActivity.speedQuestions || []).length;
     const nextIndex = speedIndex + 1;
+    const nextCorrectCount = speedCorrectCount + (isCorrect ? 1 : 0);
     if (isCorrect) {
       const nextStreak = speedStreak + 1;
+      setSpeedCorrectCount(nextCorrectCount);
       setSpeedStreak(nextStreak);
+      setSpeedComboPulse((v) => v + 1);
       setSpeedScore((prev) => prev + 10 + nextStreak * 2);
       setGameMessage('Correct! Keep your streak alive.');
     } else {
+      setSpeedCorrectCount(nextCorrectCount);
       setSpeedStreak(0);
       setGameMessage('Incorrect. Try the next one quickly.');
     }
     setSpeedIndex(nextIndex);
     if (nextIndex >= total) {
+      recordActivityScore(activeTestActivity.id, total > 0 ? (nextCorrectCount / total) * 100 : 0);
       setShowWinBadge(true);
       setTimerRunning(false);
       setGameMessage('Speed challenge completed!');
@@ -1307,6 +1379,7 @@ export default function Home() {
     if (!activeTestActivity || activeTestActivity.activityType !== 'classification') return;
     const items = activeTestActivity.classificationItems || [];
     const correct = items.filter((it) => classifySelections[it.id] === it.category).length;
+    recordActivityScore(activeTestActivity.id, items.length > 0 ? (correct / items.length) * 100 : 0);
     if (correct === items.length && items.length > 0) {
       setShowWinBadge(true);
       setTimerRunning(false);
@@ -1330,6 +1403,7 @@ export default function Home() {
     const expected = (activeTestActivity.causeEffectPairs || []).map((p) => p.effect);
     const correct = causeEffectOrder.filter((value, idx) => value === expected[idx]).length;
     setCauseEffectScore({ correct, total: expected.length });
+    recordActivityScore(activeTestActivity.id, expected.length > 0 ? (correct / expected.length) * 100 : 0);
     if (correct === expected.length) {
       setShowWinBadge(true);
       setTimerRunning(false);
@@ -1343,6 +1417,7 @@ export default function Home() {
     if (!activeTestActivity || activeTestActivity.activityType !== 'map-label') return;
     const points = activeTestActivity.mapPoints || [];
     const correct = points.filter((point) => mapSelections[point.id] === point.label).length;
+    recordActivityScore(activeTestActivity.id, points.length > 0 ? (correct / points.length) * 100 : 0);
     if (correct === points.length && points.length > 0) {
       setShowWinBadge(true);
       setTimerRunning(false);
@@ -1370,6 +1445,7 @@ export default function Home() {
         if (nextMatched.length === totalCards) {
           setShowWinBadge(true);
           setTimerRunning(false);
+          recordActivityScore(activeTestActivity.id, 100);
           setGameMessage('All memory cards matched.');
         } else {
           setGameMessage('Nice match!');
@@ -1386,6 +1462,8 @@ export default function Home() {
     const picked = evidence.filter((e) => debateSelected.includes(e.id));
     const allPickedAreSupport = picked.every((e) => e.supports);
     const supportCount = evidence.filter((e) => e.supports).length;
+    const supportPickedCount = picked.filter((e) => e.supports).length;
+    recordActivityScore(activeTestActivity.id, supportCount > 0 ? (supportPickedCount / supportCount) * 100 : 0);
     if (picked.length === supportCount && allPickedAreSupport) {
       setShowWinBadge(true);
       setTimerRunning(false);
@@ -1397,15 +1475,37 @@ export default function Home() {
 
   function scoreTeam(team: 'A' | 'B', correct: boolean) {
     if (!activeTestActivity || activeTestActivity.activityType !== 'team-battle') return;
-    setTeamScores((prev) => ({ ...prev, [team]: prev[team] + (correct ? 10 : 0) }));
     const total = (activeTestActivity.teamBattleQuestions || []).length;
     const nextIndex = teamQuestionIndex + 1;
+    const nextTeamScores = { ...teamScores, [team]: teamScores[team] + (correct ? 10 : 0) };
+    setTeamScores(nextTeamScores);
     setTeamQuestionIndex(nextIndex);
     if (nextIndex >= total) {
+      recordActivityScore(activeTestActivity.id, total > 0 ? (Math.max(nextTeamScores.A, nextTeamScores.B) / (total * 10)) * 100 : 0);
       setShowWinBadge(true);
       setTimerRunning(false);
       setGameMessage('Team battle round completed.');
     }
+  }
+
+  function checkQuizAnswers() {
+    if (!activeTestActivity || activeTestActivity.activityType !== 'quiz') return;
+    const questions = activeTestActivity.questions || [];
+    const total = questions.length;
+    let correct = 0;
+
+    questions.forEach((_, index) => {
+      if (quizSelections[index] === 1) correct += 1;
+    });
+
+    setQuizScore({ correct, total });
+    recordActivityScore(activeTestActivity.id, total > 0 ? (correct / total) * 100 : 0);
+    if (total > 0 && correct === total) {
+      setShowWinBadge(true);
+      setGameMessage('Excellent! All quiz answers are correct.');
+      return;
+    }
+    setGameMessage(`Quiz score: ${correct}/${total}`);
   }
 
   const matchingProgressTotal = activeTestActivity?.matchingPairs?.length || 0;
@@ -1429,25 +1529,10 @@ export default function Home() {
   const mapPoints = activeTestActivity?.mapPoints || [];
   const mapCorrect = mapPoints.filter((point) => mapSelections[point.id] === point.label).length;
   const mapPercent = mapPoints.length > 0 ? Math.round((mapCorrect / mapPoints.length) * 100) : null;
+  const quizPercent = quizScore ? Math.round((quizScore.correct / quizScore.total) * 100) : null;
 
   return (
     <main className="platform">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">EduAI Learning Platform</p>
-          <h1>Teacher-guided GenAI Learning Experience</h1>
-          <p>
-            Student-centered, course-specific support powered by uploaded materials, lecture context, and
-            assessment criteria.
-          </p>
-        </div>
-        <div className="hero-badge">
-          <span>Active Course</span>
-          <strong>{selectedCourse.code}</strong>
-          <small>{selectedCourse.name}</small>
-        </div>
-      </header>
-
       <section className="toolbar card">
         <label htmlFor="course-select">Select course</label>
         <select
@@ -1455,6 +1540,8 @@ export default function Home() {
           value={selectedCourseId}
           onChange={(e) => {
             setSelectedCourseId(e.target.value);
+            setActiveTestId(null);
+            setTestStatus('Waiting for instruction');
             setChatMessages([
               {
                 role: 'assistant',
@@ -1476,6 +1563,22 @@ export default function Home() {
           {loading ? ' (loading...)' : ''}
         </p>
       </section>
+
+      <header className="hero">
+        <div>
+          <p className="eyebrow">EduAI Learning Platform</p>
+          <h1>Teacher-guided GenAI Learning Experience</h1>
+          <p>
+            Student-centered, course-specific support powered by uploaded materials, lecture context, and
+            assessment criteria.
+          </p>
+        </div>
+        <div className="hero-badge">
+          <span>Active Course</span>
+          <strong>{selectedCourse.code}</strong>
+          <small>{selectedCourse.name}</small>
+        </div>
+      </header>
 
       <section className="grid-layout">
         <article className="card chat-card">
@@ -1561,7 +1664,8 @@ export default function Home() {
                   </th>
                   <th>Preview</th>
                   <th>Summary</th>
-                  <th>Actions</th>
+                  <th>Delete</th>
+                  <th>Rename</th>
                 </tr>
               </thead>
               <tbody>
@@ -1580,22 +1684,20 @@ export default function Home() {
                       </button>
                     </td>
                     <td>
-                      <button
-                        className="small ghost"
-                        onClick={(e) => {
-                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                          setMenuPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
-                          setOpenMenuFor(openMenuFor === f.path ? null : f.path);
-                        }}
-                      >
-                        ⋯
+                      <button className="small ghost" onClick={() => handleDelete(f.path)}>
+                        Delete
+                      </button>
+                    </td>
+                    <td>
+                      <button className="small ghost" onClick={() => handleRename(f.path)}>
+                        Rename
                       </button>
                     </td>
                   </tr>
                 ))}
                 {files.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={5}>No files yet for this course.</td>
+                    <td colSpan={6}>No files yet for this course.</td>
                   </tr>
                 )}
               </tbody>
@@ -1681,9 +1783,7 @@ export default function Home() {
               {grades.map((grade) => (
                 <div key={grade.id} className="grade-item">
                   <div className="grade-header">
-                    <strong>
-                      {grade.assignment_id ? 'Assignment Submission' : 'Course Grade'}
-                    </strong>
+                    <strong>{grade.assignment_id ? 'Assignment Submission' : 'Course Grade'}</strong>
                     <span className="grade-percentage">{grade.percentage}%</span>
                   </div>
                   <div className="grade-bar">
@@ -1709,57 +1809,38 @@ export default function Home() {
 
       <section className="card teacher-test-section">
         <div className="teacher-test-left">
-          <div className="teacher-test-current-subject">Current Subject: {testSubject}</div>
+          <div className="teacher-test-current-subject">Current Course: {selectedCourse.code}</div>
 
           <div className="teacher-test-brand">
             <h2>Clibot Edu</h2>
             <p className="teacher-test-brand-subtitle">Teacher-focused Education AI</p>
             <p>
               An education AI designed for teachers. It can generate test questions, mini quizzes, and classroom
-              activities from natural-language instructions, supports different subjects and question types, and
+              activities from natural-language instructions, supports different activity types, and
               directly displays a ready-to-use test interface on the right side of this platform.
             </p>
-          </div>
-
-          <div className="teacher-test-subject-picker">
-            <label htmlFor="test-subject-select">Subject Selection</label>
-            <select
-              id="test-subject-select"
-              value={testSubject}
-              onChange={(e) => {
-                const nextSubject = e.target.value as TestSubject;
-                setTestSubject(nextSubject);
-                setActiveTestId(null);
-                setTestStatus('Waiting for instruction');
-              }}
-            >
-              {TEST_SUBJECTS.map((subject) => (
-                <option key={subject} value={subject}>
-                  {subject}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="teacher-test-list-wrap">
             <h3>Generated Test Activities</h3>
             <p>Click an activity name to preview it in the right panel.</p>
+            <p className="teacher-average-score">Overall average score: {averageCourseScore !== null ? `${averageCourseScore}%` : 'Pending'}</p>
             <ul className="teacher-test-list">
-              {currentSubjectActivities.length === 0 && (
+              {currentCourseActivities.length === 0 && (
                 <li className="teacher-test-list-empty">
-                  No test activities yet for this subject. Submit an instruction to create one.
+                  No test activities yet for this course. Submit an instruction to create one.
                 </li>
               )}
-              {currentSubjectActivities.map((activity) => (
-                <li key={activity.id}>
+              {currentActivityEntries.map(({ activity, variant }) => (
+                <li key={activity.id} className={variant === 'personalized' ? 'teacher-test-item-nested' : ''}>
                   <button
                     className={activeTestActivity?.id === activity.id ? 'teacher-test-item active' : 'teacher-test-item'}
                     onClick={() => {
                       setActiveTestId(activity.id);
-                      setTestStatus('Previewing saved activity');
+                      setTestStatus(variant === 'personalized' ? 'Previewing personalized activity' : 'Previewing saved activity');
                     }}
                   >
-                    {activity.title}
+                    <span>{activity.title}</span>
                   </button>
                 </li>
               ))}
@@ -1773,18 +1854,36 @@ export default function Home() {
               value={testPromptInput}
               onChange={(e) => setTestPromptInput(e.target.value)}
               rows={5}
-              placeholder="Example: Generate a middle school mathematics multiple-choice quiz with 5 questions."
+              placeholder={`Example: Generate a ${selectedCourse.code} multiple-choice quiz with 5 questions.`}
             />
             <div className="teacher-test-prompt-actions">
-              <p>Submit your instruction to generate a new test activity for the selected subject.</p>
+              <p>Submit your instruction to generate a new test activity for the selected course.</p>
               <button onClick={handleGenerateTestActivity} disabled={testGenerating}>
                 {testGenerating ? 'Generating...' : 'Generate Test'}
               </button>
             </div>
             <p className="teacher-test-prompt-tip">
-              Tip: try keywords like "matching", "timeline", "fill blank", "scenario",
-              "speed", "classification", "cause effect", "map label", "memory", "debate", or "team battle".
+              Tip: try keywords like &quot;matching&quot;, &quot;timeline&quot;, &quot;fill blank&quot;, &quot;scenario&quot;,
+              &quot;speed&quot;, &quot;classification&quot;, &quot;cause effect&quot;, &quot;memory&quot;, &quot;debate&quot;, or &quot;team battle&quot;.
             </p>
+          </div>
+
+          <div className="teacher-test-prompt teacher-personalize-panel">
+            <label htmlFor="personalize-input">Personalize Selected Test</label>
+            <textarea
+              id="personalize-input"
+              value={personalizeInput}
+              onChange={(e) => setPersonalizeInput(e.target.value)}
+              rows={4}
+              placeholder="Example: Make the questions easier and focus on lecture concepts only."
+              disabled={!activeTestActivity}
+            />
+            <div className="teacher-test-prompt-actions">
+              <p>Customize the currently selected generated test.</p>
+              <button onClick={handlePersonalizeActivity} disabled={!activeTestActivity}>
+                Personalize
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1792,7 +1891,8 @@ export default function Home() {
           <div className="teacher-test-header">
             <div>
               <h2>AI Generated Test Activity</h2>
-              <p>Subject: {testSubject}</p>
+              <p>Course: {selectedCourse.code} - {selectedCourse.name}</p>
+              {averageCourseScore !== null && <p className="teacher-average-score">Average score: {averageCourseScore}%</p>}
             </div>
             <div className="teacher-test-header-chips">
               {timeLeftSec !== null && <span className="teacher-chip">Time: {formatDuration(timeLeftSec)}</span>}
@@ -1819,6 +1919,9 @@ export default function Home() {
               {activeTestActivity?.activityType === 'team-battle' && (
                 <span className="teacher-chip">A {teamScores.A} - B {teamScores.B}</span>
               )}
+              {activeTestActivity?.activityType === 'quiz' && quizPercent !== null && (
+                <span className="teacher-chip">Score: {quizPercent}</span>
+              )}
               <span>{testStatus}</span>
             </div>
           </div>
@@ -1834,18 +1937,58 @@ export default function Home() {
               {showWinBadge && <div className="teacher-win-badge">Activity Cleared!</div>}
 
               {activeTestActivity.activityType === 'quiz' && (
-                <ol className="teacher-test-questions">
-                  {(activeTestActivity.questions || []).map((question, index) => (
-                    <li key={`${activeTestActivity.id}-${index}`} className="teacher-test-question-item">
-                      <p>{question.question}</p>
-                      <ul>
-                        {question.options.map((option, optionIndex) => (
-                          <li key={`${activeTestActivity.id}-${index}-${optionIndex}`}>{option}</li>
-                        ))}
-                      </ul>
-                    </li>
-                  ))}
-                </ol>
+                <div className="teacher-game-wrap">
+                  <div className="teacher-game-head">
+                    <p>Select one answer for each question and press Check Answers.</p>
+                    <div className="teacher-ordering-actions">
+                      <button className="small" onClick={checkQuizAnswers}>
+                        Check Answers
+                      </button>
+                      <button className="small ghost" onClick={resetCurrentGame}>
+                        Reset Quiz
+                      </button>
+                    </div>
+                  </div>
+                  <ol className="teacher-test-questions">
+                    {(activeTestActivity.questions || []).map((question, index) => (
+                      <motion.li
+                        key={`${activeTestActivity.id}-${index}`}
+                        className="teacher-test-question-item"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          rotateY: quizSelections[index] !== undefined ? 2 : 0,
+                        }}
+                        transition={{ delay: index * 0.06 }}
+                        style={{ transformStyle: 'preserve-3d' }}
+                      >
+                        <p>Q{index + 1}. {question.question}</p>
+                        <ul className="teacher-quiz-options">
+                          {question.options.map((option, optionIndex) => (
+                            <li key={`${activeTestActivity.id}-${index}-${optionIndex}`}>
+                              <motion.button
+                                className={`teacher-quiz-option ${quizSelections[index] === optionIndex ? 'selected' : ''}`}
+                                onClick={() => {
+                                  setQuizSelections((prev) => ({ ...prev, [index]: optionIndex }));
+                                }}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                {option}
+                              </motion.button>
+                            </li>
+                          ))}
+                        </ul>
+                      </motion.li>
+                    ))}
+                  </ol>
+                  {quizScore && (
+                    <p className="teacher-ordering-score">
+                      Correct answers: {quizScore.correct}/{quizScore.total}
+                    </p>
+                  )}
+                </div>
               )}
 
               {activeTestActivity.activityType === 'matching' && (
@@ -1895,7 +2038,7 @@ export default function Home() {
               {activeTestActivity.activityType === 'ordering' && (
                 <div className="teacher-game-wrap">
                   <div className="teacher-game-head">
-                    <p>Arrange the steps in the best sequence for this activity.</p>
+                    <p>Arrange the timeline by dragging each step to the correct order.</p>
                     <div className="teacher-ordering-actions">
                       <button className="small" onClick={checkOrderingAnswer}>
                         Check Sequence
@@ -1905,21 +2048,15 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <ol className="teacher-ordering-list">
-                    {orderingCurrent.map((item, index) => (
-                      <li key={`${activeTestActivity.id}-ordering-${item}`}>
-                        <span>{item}</span>
-                        <div>
-                          <button className="small ghost" onClick={() => moveOrderingItem(index, 'up')}>
-                            Up
-                          </button>
-                          <button className="small ghost" onClick={() => moveOrderingItem(index, 'down')}>
-                            Down
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOrderingDragEnd}>
+                    <SortableContext items={orderingCurrent} strategy={verticalListSortingStrategy}>
+                      <ol className="teacher-ordering-list">
+                        {orderingCurrent.map((item) => (
+                          <SortableTimelineItem key={`${activeTestActivity.id}-ordering-${item}`} id={item} label={item} />
+                        ))}
+                      </ol>
+                    </SortableContext>
+                  </DndContext>
                   {orderingScore && (
                     <p className="teacher-ordering-score">
                       Correct positions: {orderingScore.correct}/{orderingScore.total}
@@ -1992,29 +2129,66 @@ export default function Home() {
 
               {activeTestActivity.activityType === 'speed-challenge' && (
                 <div className="teacher-game-wrap">
-                  <div className="teacher-game-head">
-                    <p>
-                      Question {Math.min(speedIndex + 1, (activeTestActivity.speedQuestions || []).length)}/
-                      {(activeTestActivity.speedQuestions || []).length} | Streak: {speedStreak}
-                    </p>
+                  <div className="teacher-speed-hud">
+                    <div>
+                      <small>Question</small>
+                      <strong>
+                        {Math.min(speedIndex + 1, (activeTestActivity.speedQuestions || []).length)}/
+                        {(activeTestActivity.speedQuestions || []).length}
+                      </strong>
+                    </div>
+                    <div>
+                      <small>Timer</small>
+                      <strong>{timeLeftSec !== null ? formatDuration(timeLeftSec) : '--:--'}</strong>
+                    </div>
+                    <div>
+                      <small>Streak</small>
+                      <strong>x{speedStreak}</strong>
+                    </div>
+                    <div>
+                      <small>Score</small>
+                      <strong>{speedScore}</strong>
+                    </div>
                     <button className="small ghost" onClick={resetCurrentGame}>
                       Reset Speed
                     </button>
                   </div>
+                  <AnimatePresence>
+                    {speedStreak >= 2 && (
+                      <motion.div
+                        key={speedComboPulse}
+                        className="teacher-combo-badge"
+                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                        transition={{ duration: 0.28 }}
+                      >
+                        Combo x{speedStreak}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   {speedIndex < (activeTestActivity.speedQuestions || []).length ? (
-                    <div className="teacher-speed-card">
+                    <motion.div
+                      key={`${activeTestActivity.id}-speed-card-${speedIndex}`}
+                      className="teacher-speed-card"
+                      initial={{ opacity: 0, x: 18 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.22 }}
+                    >
                       <p>{(activeTestActivity.speedQuestions || [])[speedIndex].question}</p>
                       <div className="teacher-speed-options">
                         {(activeTestActivity.speedQuestions || [])[speedIndex].options.map((opt, idx) => (
-                          <button
+                          <motion.button
                             key={`${activeTestActivity.id}-speed-${idx}`}
                             onClick={() => answerSpeedChallenge(idx === 1)}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.97 }}
                           >
                             {opt}
-                          </button>
+                          </motion.button>
                         ))}
                       </div>
-                    </div>
+                    </motion.div>
                   ) : (
                     <p>Speed challenge completed.</p>
                   )}
@@ -2096,34 +2270,9 @@ export default function Home() {
               {activeTestActivity.activityType === 'map-label' && (
                 <div className="teacher-game-wrap">
                   <div className="teacher-game-head">
-                    <p>Label each map point with the correct learning zone.</p>
-                    <div className="teacher-ordering-actions">
-                      <button className="small" onClick={checkMapLabels}>
-                        Check Labels
-                      </button>
-                      <button className="small ghost" onClick={resetCurrentGame}>
-                        Reset
-                      </button>
-                    </div>
+                    <p>Map-label activity is currently disabled.</p>
                   </div>
-                  <div className="teacher-map-list">
-                    {mapPoints.map((point) => (
-                      <div key={`${activeTestActivity.id}-map-${point.id}`}>
-                        <strong>{point.location}</strong>
-                        <select
-                          value={mapSelections[point.id] || ''}
-                          onChange={(e) => setMapSelections((prev) => ({ ...prev, [point.id]: e.target.value }))}
-                        >
-                          <option value="">Select label</option>
-                          {shuffleArray(mapPoints.map((p) => p.label)).map((label, idx) => (
-                            <option key={`${activeTestActivity.id}-map-label-${idx}`} value={label}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="teacher-game-message">Please generate another type such as matching, timeline, quiz, or speed challenge.</p>
                 </div>
               )}
 
@@ -2218,20 +2367,13 @@ export default function Home() {
             <div className="teacher-test-empty">
               <h3>Ready to Generate</h3>
               <p>
-                Select a subject and enter an instruction in the left panel. The generated test interface, including
+                Select a course and enter an instruction in the left panel. The generated test interface, including
                 title, questions, and options, will appear here.
               </p>
             </div>
           )}
         </div>
       </section>
-
-      {openMenuFor && menuPos && (
-        <div ref={actionsRef} className="floating-menu" style={{ top: menuPos.top, left: menuPos.left }}>
-          <button onClick={() => handleDelete(openMenuFor)}>Delete</button>
-          <button onClick={() => handleRename(openMenuFor)}>Rename</button>
-        </div>
-      )}
 
       {previewUrl && (
         <div className="overlay">

@@ -1,0 +1,12 @@
+{
+  "name": "group16-comp3122-root",
+  "private": true,
+  "dependencies": {
+    "next": "16.1.6"
+  },
+  "scripts": {
+    "dev": "cd edu-16-app && npm run dev",
+    "build": "cd edu-16-app && npm run build",
+    "start": "cd edu-16-app && npm run start"
+  }
+}

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
 import { getErrorMessage } from '@/lib/errorHandler';
+import { getFallbackGrades, isMissingTableError } from '@/lib/fallbackAcademicData';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ courseId: string }> }
 ) {
   const supabase = getSupabaseServer();
+  const { courseId } = await params;
   try {
-    const { courseId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
 
@@ -28,6 +29,12 @@ export async function GET(
     return NextResponse.json({ grades: data || [] });
   } catch (err: unknown) {
     const message = getErrorMessage(err);
+    if (isMissingTableError(message)) {
+      return NextResponse.json({
+        grades: getFallbackGrades(courseId),
+        fallback: true,
+      });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
