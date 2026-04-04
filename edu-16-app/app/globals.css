@@ -39,6 +39,10 @@ body {
   font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .platform {
   max-width: 1200px;
   margin: 0 auto;
@@ -104,6 +108,33 @@ body {
   display: grid;
   gap: 8px;
   order: 1;
+}
+
+.top-anchor-nav {
+  margin-top: 6px;
+  display: flex;
+  column-gap: 14px;
+  row-gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  order: 0;
+}
+
+.top-anchor-nav a {
+  display: inline-block;
+  text-decoration: none;
+  color: #1e293b;
+  border: 1px solid #e2d7c5;
+  background: #fffaf2;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 1px 0 rgba(19, 41, 61, 0.05);
+}
+
+.top-anchor-nav a:hover {
+  background: #fef3e2;
 }
 
 .card {
@@ -260,6 +291,40 @@ button:disabled,
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.group-mgmt-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.group-mgmt-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.group-mgmt-row label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.group-mgmt-row input,
+.group-mgmt-row select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #d5cdbc;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.group-mgmt-actions {
+  margin-top: 8px;
 }
 
 .picked {
@@ -1285,6 +1350,11 @@ td {
   .teacher-ordering-list li {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .group-mgmt-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }
 

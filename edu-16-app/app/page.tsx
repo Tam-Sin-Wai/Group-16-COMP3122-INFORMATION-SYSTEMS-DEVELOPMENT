@@ -62,6 +62,30 @@ type Grade = {
   updated_at: string;
 };
 
+type ProjectItem = {
+  id: string;
+  course_id: string;
+  name: string;
+  description?: string | null;
+  target_group_size: number;
+  max_groups?: number | null;
+  status: 'draft' | 'grouping' | 'active' | 'archived';
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type GroupItem = {
+  id: string;
+  project_id: string;
+  name: string;
+  capacity: number;
+  created_at: string;
+  members: { user_id: string; joined_at: string }[];
+  memberCount: number;
+  latestChatAt?: string | null;
+};
+
 type TestQuestion = {
   question: string;
   options: string[];
@@ -207,6 +231,18 @@ function getBaseActivityTitle(title: string) {
   return title.replace(/\s+Personalization\s*\d+$/i, '').replace(/\s+Personalization$/i, '').trim();
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+const DEFAULT_TEACHER_USER_ID = '550e8400-e29b-41d4-a716-446655440001';
+const PRESET_STUDENTS = ['26000000d', '27000000d', '28000000d'] as const;
+const PRESET_STUDENT_ID_MAP: Record<string, string> = {
+  '26000000d': '550e8400-e29b-41d4-a716-446655440101',
+  '27000000d': '550e8400-e29b-41d4-a716-446655440102',
+  '28000000d': '550e8400-e29b-41d4-a716-446655440103',
+};
+
 export default function Home() {
   const [selectedCourseId, setSelectedCourseId] = useState(COURSES[0].id);
   const selectedCourse = useMemo(
@@ -236,6 +272,19 @@ export default function Home() {
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
   const [gradesLoading, setGradesLoading] = useState(false);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [projectNameInput, setProjectNameInput] = useState('');
+  const [groupCountInput, setGroupCountInput] = useState(2);
+  const [minPerGroupInput, setMinPerGroupInput] = useState(1);
+  const [maxPerGroupInput, setMaxPerGroupInput] = useState(3);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [currentUserId, setCurrentUserId] = useState(DEFAULT_TEACHER_USER_ID);
+  const [groupUiNotice, setGroupUiNotice] = useState('Ready');
+  const [localProjectsByCourse, setLocalProjectsByCourse] = useState<Record<string, ProjectItem[]>>({});
+  const [localGroupsByProject, setLocalGroupsByProject] = useState<Record<string, GroupItem[]>>({});
 
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -294,7 +343,15 @@ export default function Home() {
     fetchMaterials();
     fetchAssignments();
     fetchGrades();
+    fetchProjects();
+    setGroups([]);
+    setSelectedProjectId('');
   }, [selectedCourseId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    fetchGroups(selectedProjectId);
+  }, [selectedProjectId]);
 
   const displayNames = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -389,6 +446,190 @@ export default function Home() {
       setGradesLoading(false);
     }
   }, [selectedCourseId]);
+
+  const fetchProjects = useCallback(async () => {
+    setProjectLoading(true);
+    try {
+      const res = await fetch(`/api/projects?courseId=${encodeURIComponent(selectedCourseId)}`);
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      const list = (json.projects || []) as ProjectItem[];
+      setProjects(list);
+      if (list.length > 0) {
+        setSelectedProjectId((prev) => prev || list[0].id);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const usingLocal = localProjectsByCourse[selectedCourseId] || [];
+      setProjects(usingLocal);
+      setStatus(`Project list error: ${message}`);
+      if (message.includes("Could not find the table 'public.projects'")) {
+        setGroupUiNotice('DB project tables not found. Switched to local demo mode for group management.');
+      }
+    } finally {
+      setProjectLoading(false);
+    }
+  }, [selectedCourseId, localProjectsByCourse]);
+
+  function buildLocalGroups(projectId: string, groupCount: number, maxPerGroup: number): GroupItem[] {
+    const now = new Date().toISOString();
+    const mappedPresetStudents = PRESET_STUDENTS.map((id) => PRESET_STUDENT_ID_MAP[id]);
+    const groups: GroupItem[] = Array.from({ length: groupCount }, (_, idx) => ({
+      id: `${projectId}-group-${idx + 1}`,
+      project_id: projectId,
+      name: `Group ${idx + 1}`,
+      capacity: maxPerGroup,
+      created_at: now,
+      members: [],
+      memberCount: 0,
+      latestChatAt: null,
+    }));
+
+    let cursor = 0;
+    for (const studentId of mappedPresetStudents) {
+      let attempts = 0;
+      while (attempts < groups.length) {
+        const group = groups[cursor % groups.length];
+        cursor += 1;
+        attempts += 1;
+        if (group.members.length >= group.capacity) continue;
+        group.members.push({ user_id: studentId, joined_at: now });
+        group.memberCount = group.members.length;
+        break;
+      }
+    }
+
+    return groups;
+  }
+
+  async function createProject() {
+    const name = projectNameInput.trim();
+    if (!name) {
+      setStatus('Project name is required');
+      setGroupUiNotice('Project name is required');
+      return;
+    }
+    if (minPerGroupInput > maxPerGroupInput) {
+      setStatus('Min students per group cannot be greater than max students per group');
+      setGroupUiNotice('Min students per group cannot be greater than max students per group');
+      return;
+    }
+
+    const effectiveUserId = isUuid(currentUserId) ? currentUserId.trim() : DEFAULT_TEACHER_USER_ID;
+
+    try {
+      setGroupUiNotice('Creating project...');
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: selectedCourseId,
+          name,
+          description: `Teacher config: ${groupCountInput} groups, min ${minPerGroupInput}, max ${maxPerGroupInput} per group`,
+          targetGroupSize: maxPerGroupInput,
+          maxGroups: groupCountInput,
+          createdBy: effectiveUserId,
+          status: 'grouping',
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText);
+      }
+      const json = await res.json();
+      const createdProjectId = json.project?.id as string | undefined;
+      if (!createdProjectId) throw new Error('Project created but missing project id');
+
+      const mappedPresetStudents = PRESET_STUDENTS.map((id) => PRESET_STUDENT_ID_MAP[id]);
+      const seedRes = await fetch(`/api/projects/${encodeURIComponent(createdProjectId)}/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupCount: groupCountInput,
+          maxPerGroup: maxPerGroupInput,
+          presetStudentIds: mappedPresetStudents,
+        }),
+      });
+      if (!seedRes.ok) {
+        const errText = await seedRes.text();
+        throw new Error(`Project created, but group creation failed: ${errText}`);
+      }
+
+      setProjectNameInput('');
+      await fetchProjects();
+      setSelectedProjectId(createdProjectId);
+      await fetchGroups(createdProjectId);
+      const okMessage =
+        isUuid(currentUserId)
+          ? 'Project created'
+          : `Project created (teacher ID auto-corrected to ${DEFAULT_TEACHER_USER_ID})`;
+      setStatus(okMessage);
+      setGroupUiNotice(okMessage);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("Could not find the table 'public.projects'")) {
+        const now = new Date().toISOString();
+        const localProjectId = `local-${Date.now()}`;
+        const localProject: ProjectItem = {
+          id: localProjectId,
+          course_id: selectedCourseId,
+          name,
+          description: `Teacher config: ${groupCountInput} groups, min ${minPerGroupInput}, max ${maxPerGroupInput} per group`,
+          target_group_size: maxPerGroupInput,
+          max_groups: groupCountInput,
+          status: 'grouping',
+          created_by: effectiveUserId,
+          created_at: now,
+          updated_at: now,
+        };
+        const localGroups = buildLocalGroups(localProjectId, groupCountInput, maxPerGroupInput);
+
+        setLocalProjectsByCourse((prev) => {
+          const current = prev[selectedCourseId] || [];
+          return { ...prev, [selectedCourseId]: [localProject, ...current] };
+        });
+        setLocalGroupsByProject((prev) => ({ ...prev, [localProjectId]: localGroups }));
+        setProjects((prev) => [localProject, ...prev]);
+        setSelectedProjectId(localProjectId);
+        setGroups(localGroups);
+        setProjectNameInput('');
+        setGroupUiNotice('DB tables missing. Local demo project created and displayed successfully.');
+        setStatus('Local demo project created');
+      } else {
+        setStatus(`Create project error: ${message}`);
+        setGroupUiNotice(`Create project error: ${message}`);
+      }
+    }
+  }
+
+  async function fetchGroups(projectId: string) {
+    if (!projectId) return;
+    if (projectId.startsWith('local-')) {
+      const list = localGroupsByProject[projectId] || [];
+      setGroups(list);
+      setGroupUiNotice(list.length > 0 ? `Loaded ${list.length} groups (local mode)` : 'No groups found for this local project');
+      return;
+    }
+    setGroupLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/groups`);
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      const list = (json.groups || []) as GroupItem[];
+      setGroups(list);
+      setGroupUiNotice(list.length > 0 ? `Loaded ${list.length} groups` : 'No groups found for this project');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(`Group list error: ${message}`);
+      if (message.includes("Could not find the table 'public.projects'")) {
+        const local = localGroupsByProject[projectId] || [];
+        setGroups(local);
+        setGroupUiNotice(local.length > 0 ? `Loaded ${local.length} groups (local mode)` : 'DB tables missing and no local groups found');
+      }
+    } finally {
+      setGroupLoading(false);
+    }
+  }
 
   async function uploadSingle(file: File) {
     const fd = new FormData();
@@ -1533,6 +1774,14 @@ export default function Home() {
 
   return (
     <main className="platform">
+      <nav className="top-anchor-nav card" aria-label="Feature navigation">
+        <a href="#virtual-teacher">Virtual Teacher</a>
+        <a href="#upload-center">Upload Center</a>
+        <a href="#course-data">Course Data</a>
+        <a href="#group-management">Group Management</a>
+        <a href="#clibot-edu">Clibot Edu</a>
+      </nav>
+
       <section className="toolbar card">
         <label htmlFor="course-select">Select course</label>
         <select
@@ -1581,7 +1830,7 @@ export default function Home() {
       </header>
 
       <section className="grid-layout">
-        <article className="card chat-card">
+        <article id="virtual-teacher" className="card chat-card">
           <div className="card-head">
             <h2>Virtual Teacher</h2>
             <span>{selectedCourse.lecturer}</span>
@@ -1614,7 +1863,7 @@ export default function Home() {
           </div>
         </article>
 
-        <article className="card upload-card">
+        <article id="upload-center" className="card upload-card">
           <div className="card-head">
             <h2>Upload Center</h2>
             <span>Knowledge Base Files</span>
@@ -1706,7 +1955,7 @@ export default function Home() {
         </article>
       </section>
 
-      <section className="grid-secondary">
+      <section id="course-data" className="grid-secondary">
         <article className="card">
           <div className="card-head">
             <h3>Course Materials</h3>
@@ -1807,7 +2056,136 @@ export default function Home() {
         </article>
       </section>
 
-      <section className="card teacher-test-section">
+      <section className="grid-layout">
+        <article id="group-management" className="card">
+          <div className="card-head">
+            <h2>Study Group Management</h2>
+            <span>{projects.length} projects</span>
+          </div>
+
+          <div className="group-mgmt-form">
+            <div className="group-mgmt-row">
+              <label htmlFor="teacher-user-id">Teacher ID:</label>
+              <input
+                id="teacher-user-id"
+                value={currentUserId}
+                onChange={(e) => setCurrentUserId(e.target.value)}
+                placeholder="Teacher user ID (UUID)"
+              />
+            </div>
+            <div className="group-mgmt-row">
+              <label htmlFor="project-name-input">Project Name:</label>
+              <input
+                id="project-name-input"
+                value={projectNameInput}
+                onChange={(e) => setProjectNameInput(e.target.value)}
+                placeholder="Enter project name"
+              />
+            </div>
+            <div className="group-mgmt-row">
+              <label htmlFor="group-count-input">Group Number:</label>
+              <input
+                id="group-count-input"
+                type="number"
+                min={1}
+                value={groupCountInput}
+                onChange={(e) => setGroupCountInput(Math.max(1, Number(e.target.value) || 1))}
+                placeholder="Enter number of groups"
+              />
+            </div>
+            <div className="group-mgmt-row">
+              <label htmlFor="group-min-input">Students Per Group (Min):</label>
+              <input
+                id="group-min-input"
+                type="number"
+                min={1}
+                value={minPerGroupInput}
+                onChange={(e) => setMinPerGroupInput(Math.max(1, Number(e.target.value) || 1))}
+                placeholder="Enter min students"
+              />
+            </div>
+            <div className="group-mgmt-row">
+              <label htmlFor="group-max-input">Students Per Group (Max):</label>
+              <input
+                id="group-max-input"
+                type="number"
+                min={1}
+                value={maxPerGroupInput}
+                onChange={(e) => setMaxPerGroupInput(Math.max(1, Number(e.target.value) || 1))}
+                placeholder="Enter max students"
+              />
+            </div>
+          </div>
+
+          <div className="controls group-mgmt-actions">
+            <button onClick={createProject}>Create Project</button>
+            <button className="ghost" onClick={fetchProjects} disabled={projectLoading}>
+              {projectLoading ? 'Loading...' : 'Refresh Projects'}
+            </button>
+          </div>
+
+          <p className="status">{groupUiNotice}</p>
+
+          <div className="group-mgmt-form">
+            <div className="group-mgmt-row">
+              <label htmlFor="project-select">Project List:</label>
+              <select id="project-select" value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                <option value="">Select project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name} ({project.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="controls group-mgmt-actions">
+            <button className="ghost" onClick={() => selectedProjectId && fetchGroups(selectedProjectId)} disabled={!selectedProjectId || groupLoading}>
+              {groupLoading ? 'Loading...' : 'Refresh Groups'}
+            </button>
+          </div>
+
+          <div className="controls">
+            <div>
+              <small>Preset students:</small>
+              <p>{PRESET_STUDENTS.join(', ')}</p>
+            </div>
+          </div>
+
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th>Members (Student IDs)</th>
+                  <th>Capacity</th>
+                  <th>Remaining</th>
+                  <th>Latest Chat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((group) => (
+                  <tr key={group.id}>
+                    <td>{group.name}</td>
+                    <td>{group.members.map((m) => m.user_id).join(', ') || '-'}</td>
+                    <td>{group.capacity}</td>
+                    <td>{Math.max(0, group.capacity - group.memberCount)}</td>
+                    <td>{group.latestChatAt ? formatDateTime(group.latestChatAt) : 'No messages yet'}</td>
+                  </tr>
+                ))}
+                {groups.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>No groups yet. Create a project first.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="clibot-edu" className="card teacher-test-section">
         <div className="teacher-test-left">
           <div className="teacher-test-current-subject">Current Course: {selectedCourse.code}</div>
 
