@@ -703,6 +703,7 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
 
   const [testPromptInput, setTestPromptInput] = useState('');
+  const [testItemCount, setTestItemCount] = useState(5);
   const [testStatus, setTestStatus] = useState('Waiting for instruction');
   const [testGenerating, setTestGenerating] = useState(false);
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
@@ -1683,19 +1684,19 @@ export default function Home() {
     };
   }
 
-  async function generateTestActivityFromAI(subject: string, promptText: string) {
+  async function generateTestActivityFromAI(subject: string, promptText: string, requestedCount?: number) {
     // AI_API_PLACEHOLDER_TOKEN
     // Insert your AI API integration here and return:
     // { title, instructionSummary, activityType, questions?, matchingPairs?, orderingItems? }.
     return new Promise<Omit<TestActivity, 'id'>>((resolve) => {
       setTimeout(() => {
         const activityType = detectActivityType(promptText);
-        const requestedQuestions = parseRequestedCount(promptText, 5, 1);
-        const requestedItems = parseRequestedCount(promptText, 4, 2);
-        const requestedSequence = parseRequestedCount(promptText, 5, 2);
-        const requestedBlanks = parseRequestedCount(promptText, 2, 2);
-        const requestedScenarioNodes = parseRequestedCount(promptText, 4, 3);
-        const requestedEvidence = parseRequestedCount(promptText, 4, 2);
+        const requestedQuestions = requestedCount ?? parseRequestedCount(promptText, 5, 1);
+        const requestedItems = requestedCount ?? parseRequestedCount(promptText, 4, 2);
+        const requestedSequence = requestedCount ?? parseRequestedCount(promptText, 5, 2);
+        const requestedBlanks = requestedCount ?? parseRequestedCount(promptText, 2, 2);
+        const requestedScenarioNodes = requestedCount ?? parseRequestedCount(promptText, 4, 3);
+        const requestedEvidence = requestedCount ?? parseRequestedCount(promptText, 4, 2);
 
         if (activityType === 'matching') {
           resolve({
@@ -1833,12 +1834,14 @@ export default function Home() {
       return;
     }
 
+    const requestedCount = Number.isFinite(testItemCount) ? Math.max(1, Math.floor(testItemCount)) : 5;
+
     setTestGenerating(true);
     setTestStatus('Generating...');
 
     try {
       const subjectLabel = selectedCourse.name;
-      const generated = await generateTestActivityFromAI(subjectLabel, instruction);
+      const generated = await generateTestActivityFromAI(subjectLabel, instruction, requestedCount);
       const newActivity: TestActivity = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         ...generated,
@@ -3126,6 +3129,18 @@ export default function Home() {
               onChange={(e) => setTestPromptInput(e.target.value)}
               rows={5}
               placeholder={`Example: Generate a ${selectedCourse.code} multiple-choice quiz with 5 questions.`}
+            />
+            <label htmlFor="test-item-count" className="teacher-test-count-label">Number of items</label>
+            <input
+              id="test-item-count"
+              type="number"
+              min={1}
+              max={20}
+              value={testItemCount}
+              onChange={(e) => {
+                const nextCount = Number.parseInt(e.target.value, 10);
+                setTestItemCount(Number.isFinite(nextCount) ? nextCount : 5);
+              }}
             />
             <div className="teacher-test-prompt-actions">
               <p>Submit your instruction to generate a new test activity for the selected course.</p>
