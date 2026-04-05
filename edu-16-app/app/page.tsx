@@ -2406,8 +2406,8 @@ export default function Home() {
       <div className={`layout-shell ${sidebarPosition === 'right' ? 'sidebar-right' : ''}`}>
         <aside className="sidebar card">
           <div className="sidebar-header">
-            <p className="eyebrow">EduAI Learning Platform</p>
-            <h1>Dashboard</h1>
+            <p className="eyebrow"></p>
+            <h1>EduAI Platform</h1>
             <p>Track subjects, recent activity, and teaching tools from one full-size control panel.</p>
           </div>
 
