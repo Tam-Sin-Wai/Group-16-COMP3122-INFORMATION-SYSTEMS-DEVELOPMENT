@@ -28,3 +28,7 @@ export function getErrorMessage(error: unknown): string {
   // Fallback for other types
   return String(error);
 }
+
+export function isMissingSupabaseConfigError(message: string): boolean {
+  return message.includes('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+}

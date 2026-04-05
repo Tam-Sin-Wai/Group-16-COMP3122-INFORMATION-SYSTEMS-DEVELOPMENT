@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
+import { getErrorMessage, isMissingSupabaseConfigError } from '@/lib/errorHandler';
 
 const BUCKET = 'documents';
 
@@ -36,7 +37,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ files });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'List failed';
+    const message = getErrorMessage(error);
+    if (isMissingSupabaseConfigError(message)) {
+      return NextResponse.json({ files: [], fallback: true });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

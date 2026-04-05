@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getErrorMessage, isMissingSupabaseConfigError } from '@/lib/errorHandler';
 
 export async function GET(request: Request) {
   try {
@@ -21,7 +22,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ projects: data ?? [] });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to list projects';
+    const message = getErrorMessage(error);
+    if (isMissingSupabaseConfigError(message)) {
+      return NextResponse.json({ projects: [], fallback: true });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

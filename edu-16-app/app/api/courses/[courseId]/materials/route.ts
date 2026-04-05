@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabaseServer';
-import { getErrorMessage } from '@/lib/errorHandler';
+import { getErrorMessage, isMissingSupabaseConfigError } from '@/lib/errorHandler';
 import { getFallbackMaterials, isMissingTableError } from '@/lib/fallbackAcademicData';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ courseId: string }> }
 ) {
-  const supabase = getSupabaseServer();
   const { courseId } = await params;
   try {
+    const supabase = getSupabaseServer();
     const { data, error } = await supabase
       .from('course_materials')
       .select('*')
@@ -21,7 +21,7 @@ export async function GET(
     return NextResponse.json({ materials: data || [] });
   } catch (err: unknown) {
     const message = getErrorMessage(err);
-    if (isMissingTableError(message)) {
+    if (isMissingTableError(message) || isMissingSupabaseConfigError(message)) {
       return NextResponse.json({
         materials: getFallbackMaterials(courseId),
         fallback: true,
