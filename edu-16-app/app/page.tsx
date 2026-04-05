@@ -1690,12 +1690,12 @@ export default function Home() {
     return new Promise<Omit<TestActivity, 'id'>>((resolve) => {
       setTimeout(() => {
         const activityType = detectActivityType(promptText);
-        const requestedQuestions = parseRequestedCount(promptText, 5, 1, 10);
-        const requestedItems = parseRequestedCount(promptText, 4, 2, 10);
-        const requestedSequence = parseRequestedCount(promptText, 5, 2, 10);
-        const requestedBlanks = parseRequestedCount(promptText, 2, 2, 4);
-        const requestedScenarioNodes = parseRequestedCount(promptText, 4, 3, 6);
-        const requestedEvidence = parseRequestedCount(promptText, 4, 2, 8);
+        const requestedQuestions = parseRequestedCount(promptText, 5, 1);
+        const requestedItems = parseRequestedCount(promptText, 4, 2);
+        const requestedSequence = parseRequestedCount(promptText, 5, 2);
+        const requestedBlanks = parseRequestedCount(promptText, 2, 2);
+        const requestedScenarioNodes = parseRequestedCount(promptText, 4, 3);
+        const requestedEvidence = parseRequestedCount(promptText, 4, 2);
 
         if (activityType === 'matching') {
           resolve({
