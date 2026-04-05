@@ -38,14 +38,14 @@ Rather than a passive content repository, the platform actively facilitates:
 
 | Feature | Status |
 |---|---|
-| **Virtual Teacher** (AI chat per course) | ✅ Implemented |
-| **Study Groups** (teacher-assigned, with group chat) | ✅ Implemented |
-| **@AI in Group Chat** (course-aware AI assistant) | ✅ Implemented |
-| **Member last-online status** in group chat | ✅ Implemented |
-| Course Materials viewer | 🔜 Coming soon |
-| Assignments tracker | 🔜 Coming soon |
-| Grades overview | 🔜 Coming soon |
-| Class Discussions board | 🔜 Coming soon |
+| **Virtual Teacher** for per-course AI chat | Live |
+| **Study Groups** with teacher assignment support | Live |
+| **@AI in Group Chat** for course-aware help | Live |
+| **Member last-online status** in group chat | Live |
+| Course Materials viewer | Planned |
+| Assignments tracker | Planned |
+| Grades overview | Planned |
+| Class Discussions board | Planned |
 
 ### Virtual Teacher
 Powered by OpenAI GPT-4o-mini, the virtual teacher draws context from:

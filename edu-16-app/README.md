@@ -2,35 +2,35 @@
 
 Course-aware learning platform prototype with GenAI virtual teacher and file upload center.
 
-## Implemented now
+## Current Features
 
-- Virtual Teacher chat per course (context-aware by selected course)
-- Upload Center for course knowledge base files
-- File list, preview, rename, delete, and quick summary
-- Placeholder UI blocks for future modules (Assignments, Padlet Insights, Study Group Hub)
-- Clibot Edu (teacher activity generator) with multi-mode test/game rendering
+- Course-aware Virtual Teacher chat that answers using the selected course context
+- Upload Center for managing course knowledge base files
+- File list, preview, rename, delete, and one-click summary actions
+- Placeholder sections for upcoming modules such as Assignments, Padlet Insights, and Study Group Hub
+- Clibot Edu, a teacher activity generator with multiple test and game modes
 
-## Clibot Edu generation modes
+## Clibot Edu Generation Modes
 
-Clibot Edu can generate the following test/activity types from teacher prompts:
+Clibot Edu can generate the following activity types from teacher prompts:
 
-- `quiz` (multiple-choice Q&A)
-- `matching` (term-definition matching)
-- `ordering` (sequence/timeline arrangement)
-- `fill-blank` (cloze style completion)
-- `scenario` (branching decision path)
-- `speed-challenge` (timed quick-response rounds)
-- `classification` (categorize items into groups)
-- `cause-effect` (cause/effect chain alignment)
-- `map-label` (labeling points/diagram zones)
-- `memory` (flip-card concept matching)
-- `debate` (claim + evidence selection)
-- `team-battle` (team score-based challenge)
+- `quiz` for multiple-choice question sets
+- `matching` for term-definition matching
+- `ordering` for sequence or timeline arrangement
+- `fill-blank` for cloze-style completion tasks
+- `scenario` for branching decision paths
+- `speed-challenge` for timed quick-response rounds
+- `classification` for sorting items into groups
+- `cause-effect` for cause and effect chain alignment
+- `map-label` for labeling points or diagram zones
+- `memory` for flip-card concept matching
+- `debate` for claim and evidence selection
+- `team-battle` for team score-based challenges
 
 Notes:
 
 - Escape-room mode was removed from Clibot Edu.
-- In the current mock implementation, mode detection is keyword-based and AI API integration can be plugged into the existing placeholder function in `app/page.tsx`.
+- In the current mock implementation, mode detection is keyword-based, and AI API integration can be plugged into the existing placeholder function in `app/page.tsx`.
 
 ## New MVP planning and backend scaffold
 

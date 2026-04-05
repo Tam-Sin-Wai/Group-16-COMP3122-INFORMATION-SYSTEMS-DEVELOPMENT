@@ -1404,10 +1404,69 @@ export default function Home() {
     return 'quiz';
   }
 
-  function createMockQuestions(subject: string, promptText: string): TestQuestion[] {
-    return [
+  function parseRequestedCount(promptText: string, fallback: number, min: number) {
+    const wordCounts: Record<string, number> = {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+      一: 1,
+      二: 2,
+      三: 3,
+      四: 4,
+      五: 5,
+      六: 6,
+      七: 7,
+      八: 8,
+      九: 9,
+      十: 10,
+    };
+
+    const patterns = [
+      /(\d+)\s*(?:multiple[-\s]?choice\s*)?(?:questions?|qs?|items?|pairs?|cards?|blanks?|blank|nodes?|steps?|options?|rounds?)/i,
+      /(?:questions?|qs?|items?|pairs?|cards?|blanks?|blank|nodes?|steps?|options?|rounds?)\s*(?:of|with|for)?\s*(\d+)/i,
+      /(\d+)\s*(?:題|题|項|项|對|对|張|张|個|个)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = promptText.match(pattern);
+      if (!match) continue;
+
+      const count = Number.parseInt(match[1], 10);
+      if (Number.isFinite(count) && count > 0) {
+        return Math.max(min, count);
+      }
+    }
+
+    const wordPattern = /\b(one|two|three|four|five|six|seven|eight|nine|ten)\b|([一二三四五六七八九十])(?=\s*(?:questions?|qs?|items?|pairs?|cards?|blanks?|blank|nodes?|steps?|options?|rounds?|題|题|項|项|對|对|張|张|個|个))/i;
+    const wordMatch = promptText.match(wordPattern);
+    const word = (wordMatch?.[1] || wordMatch?.[2] || '').toLowerCase();
+    if (word) {
+      const count = wordCounts[word];
+      if (count) {
+        return Math.max(min, count);
+      }
+    }
+
+    return Math.max(min, fallback);
+  }
+
+  function parseRequestedQuestionCount(promptText: string, fallback = 3) {
+    return parseRequestedCount(promptText, fallback, 1);
+  }
+
+  function createMockQuestions(subject: string, promptText: string, count = 3): TestQuestion[] {
+    const subjectLabel = subject.toLowerCase();
+    const promptSummary = promptText.trim();
+    const templates: TestQuestion[] = [
       {
-        question: `What is the best answer to this ${subject.toLowerCase()} concept question based on the instruction?`,
+        question: `What is the best answer to this ${subjectLabel} concept question based on the instruction?`,
         options: [
           'Option A: Basic understanding',
           'Option B: Applied reasoning',
@@ -1416,7 +1475,7 @@ export default function Home() {
         ],
       },
       {
-        question: `Which statement most accurately matches the activity goal: "${promptText.trim()}"?`,
+        question: `Which statement most accurately matches the activity goal: "${promptSummary}"?`,
         options: [
           'Option A: Knowledge recall',
           'Option B: Skill practice',
@@ -1433,130 +1492,194 @@ export default function Home() {
           'Option D: Ignoring instructions',
         ],
       },
+      {
+        question: `Which choice best reflects a strong ${subjectLabel} answer aligned with the instruction?`,
+        options: [
+          'Option A: A complete, evidence-based response',
+          'Option B: A short but unrelated response',
+          'Option C: A response with no explanation',
+          'Option D: A response copied from memory without checking',
+        ],
+      },
+      {
+        question: `What should the learner do first when solving the ${subjectLabel} task described in the prompt?`,
+        options: [
+          'Option A: Identify the key concept or requirement',
+          'Option B: Skip straight to the final answer',
+          'Option C: Ignore the instruction wording',
+          'Option D: Randomly select an option',
+        ],
+      },
     ];
+
+    return Array.from({ length: count }, (_, index) => ({
+      ...templates[index % templates.length],
+      question: `${templates[index % templates.length].question}${index >= templates.length ? ` (${index + 1})` : ''}`,
+    }));
   }
 
-  function createMockMatchingPairs(subject: string): MatchingPair[] {
-    if (subject.toLowerCase().includes('computer')) {
-      return [
-        { id: 'c1', prompt: 'Variable', answer: 'Named storage for a value' },
-        { id: 'c2', prompt: 'Loop', answer: 'Repeats a block of code' },
-        { id: 'c3', prompt: 'Array', answer: 'Ordered list of values' },
-        { id: 'c4', prompt: 'Function', answer: 'Reusable block of logic' },
-      ];
-    }
-    return [
-      { id: 'g1', prompt: 'Key Concept', answer: `${subject} foundation principle` },
-      { id: 'g2', prompt: 'Core Skill', answer: `Applied ${subject.toLowerCase()} problem solving` },
-      { id: 'g3', prompt: 'Assessment Focus', answer: 'Reasoning with evidence' },
-      { id: 'g4', prompt: 'Common Mistake', answer: 'Skipping step-by-step analysis' },
-    ];
-  }
+  function createMockMatchingPairs(subject: string, count = 4): MatchingPair[] {
+    const templates = subject.toLowerCase().includes('computer')
+      ? [
+          { prompt: 'Variable', answer: 'Named storage for a value' },
+          { prompt: 'Loop', answer: 'Repeats a block of code' },
+          { prompt: 'Array', answer: 'Ordered list of values' },
+          { prompt: 'Function', answer: 'Reusable block of logic' },
+          { prompt: 'Class', answer: 'Blueprint for objects' },
+          { prompt: 'Algorithm', answer: 'Step-by-step problem solving method' },
+        ]
+      : [
+          { prompt: 'Key Concept', answer: `${subject} foundation principle` },
+          { prompt: 'Core Skill', answer: `Applied ${subject.toLowerCase()} problem solving` },
+          { prompt: 'Assessment Focus', answer: 'Reasoning with evidence' },
+          { prompt: 'Common Mistake', answer: 'Skipping step-by-step analysis' },
+          { prompt: 'Best Practice', answer: 'Connect ideas to examples' },
+          { prompt: 'Review Tip', answer: 'Summarize the main idea first' },
+        ];
 
-  function createMockOrderingItems(subject: string): string[] {
-    if (subject.toLowerCase().includes('computer')) {
-      return ['Understand requirements', 'Design algorithm', 'Write code', 'Test edge cases', 'Refactor'];
-    }
-    return ['Review instruction', `Identify ${subject.toLowerCase()} concepts`, 'Draft approach', 'Solve with steps', 'Check answer'];
-  }
-
-  function createFillBlankMock(subject: string) {
-    if (subject.toLowerCase().includes('computer')) {
+    return Array.from({ length: count }, (_, index) => {
+      const template = templates[index % templates.length];
+      const suffix = index >= templates.length ? ` ${Math.floor(index / templates.length) + 1}` : '';
       return {
-        sentence: 'A function takes ___ and returns an ___ value.',
-        answers: ['input', 'output'],
-        options: ['input', 'output', 'error', 'loop'],
+        id: `p${index + 1}`,
+        prompt: `${template.prompt}${suffix}`,
+        answer: template.answer,
       };
-    }
+    });
+  }
+
+  function createMockOrderingItems(subject: string, count = 5): string[] {
+    const templates = subject.toLowerCase().includes('computer')
+      ? ['Understand requirements', 'Design algorithm', 'Write code', 'Test edge cases', 'Refactor', 'Present solution']
+      : ['Review instruction', `Identify ${subject.toLowerCase()} concepts`, 'Draft approach', 'Solve with steps', 'Check answer', 'Reflect on feedback'];
+
+    return Array.from({ length: count }, (_, index) => {
+      const label = templates[index % templates.length];
+      return index >= templates.length ? `${label} ${Math.floor(index / templates.length) + 1}` : label;
+    });
+  }
+
+  function createFillBlankMock(subject: string, count = 2) {
+    const blankCount = Math.max(1, count);
+    const subjectLabel = subject.toLowerCase();
+    const answers = Array.from({ length: blankCount }, (_, index) => {
+      if (subjectLabel.includes('computer')) {
+        return ['input', 'output', 'algorithm', 'logic', 'requirements', 'edge cases'][index % 6];
+      }
+      return ['key idea', 'evidence', 'analysis', 'conclusion', 'supporting detail', 'example'][index % 6];
+    });
+
+    const sentence = subjectLabel.includes('computer')
+      ? Array.from({ length: blankCount }, (_, index) => `___${index + 1}`).join(', ')
+      : Array.from({ length: blankCount }, (_, index) => `___${index + 1}`).join(', ');
+
+    const optionBank = subjectLabel.includes('computer')
+      ? ['input', 'output', 'algorithm', 'logic', 'requirements', 'edge cases', 'guessing', 'copying', 'loop', 'error']
+      : ['key idea', 'evidence', 'analysis', 'conclusion', 'supporting detail', 'example', 'guessing', 'irrelevant detail', 'copied text', 'random answer'];
+
     return {
-      sentence: `A strong ${subject.toLowerCase()} response starts with ___ and includes supporting ___.`,
-      answers: ['key idea', 'evidence'],
-      options: ['key idea', 'evidence', 'guessing', 'unrelated details'],
+      sentence: subjectLabel.includes('computer')
+        ? `A program uses ${sentence} to produce a solution.`
+        : `A strong ${subjectLabel} response includes ${sentence}.`,
+      answers,
+      options: optionBank,
     };
   }
 
-  function createScenarioNodes(subject: string): ScenarioNode[] {
-    return [
-      {
-        id: 1,
-        prompt: `A student is stuck on a ${subject.toLowerCase()} task. What should happen first?`,
-        choices: [
-          { label: 'Review key concept notes', next: 2 },
-          { label: 'Skip directly to final answer', next: 3 },
-        ],
-      },
-      {
-        id: 2,
-        prompt: 'Good start. Which support strategy is best next?',
-        choices: [
-          { label: 'Try one guided practice question', next: 4 },
-          { label: 'Memorize without understanding', next: 3 },
-        ],
-      },
-      {
-        id: 3,
-        prompt: 'Learning quality dropped. Choose a corrective action.',
-        choices: [
-          { label: 'Return to concept and examples', next: 2 },
-          { label: 'Ask peer to explain with steps', next: 4 },
-        ],
-      },
-      {
-        id: 4,
-        prompt: 'Success path reached. Student can now complete an independent challenge.',
-        choices: [],
-      },
+  function createScenarioNodes(subject: string, count = 4): ScenarioNode[] {
+    const scenarioCount = Math.max(2, count);
+    const prompts = [
+      `A student is stuck on a ${subject.toLowerCase()} task. What should happen first?`,
+      'Good start. Which support strategy is best next?',
+      'Learning quality dropped. Choose a corrective action.',
+      'The student is improving. What should the next step be?',
+      'The student is ready for a harder challenge. What now?',
+      'Success path reached. Student can now complete an independent challenge.',
     ];
+
+    return Array.from({ length: scenarioCount }, (_, index) => ({
+      id: index + 1,
+      prompt: prompts[index % prompts.length],
+      choices:
+        index === scenarioCount - 1
+          ? []
+          : [
+              { label: index === 0 ? 'Review key concept notes' : 'Move forward with guidance', next: Math.min(scenarioCount, index + 2) },
+              { label: index === scenarioCount - 2 ? 'Attempt the independent challenge' : 'Skip directly to final answer', next: Math.max(1, index) },
+            ],
+    }));
   }
 
-  function createClassificationMock(subject: string) {
-    if (subject.toLowerCase().includes('computer')) {
-      return {
-        categories: ['Data', 'Control'],
-        items: [
-          { id: 'cs1', label: 'Array', category: 'Data' },
-          { id: 'cs2', label: 'If statement', category: 'Control' },
-          { id: 'cs3', label: 'Object', category: 'Data' },
-          { id: 'cs4', label: 'Loop', category: 'Control' },
-        ],
-      };
-    }
+  function createClassificationMock(subject: string, count = 4) {
+    const categories = ['Concept', 'Application'];
+    const templates = subject.toLowerCase().includes('computer')
+      ? ['Array', 'If statement', 'Object', 'Loop', 'Variable', 'Function']
+      : [`${subject} definition`, `${subject} case study`, 'Core terminology', 'Problem-solving steps', 'Worked example', 'Reflection note'];
+
     return {
-      categories: ['Concept', 'Application'],
-      items: [
-        { id: 'g1', label: `${subject} definition`, category: 'Concept' },
-        { id: 'g2', label: `${subject} case study`, category: 'Application' },
-        { id: 'g3', label: 'Core terminology', category: 'Concept' },
-        { id: 'g4', label: 'Problem-solving steps', category: 'Application' },
-      ],
+      categories: subject.toLowerCase().includes('computer') ? ['Data', 'Control'] : categories,
+      items: Array.from({ length: count }, (_, index) => ({
+        id: `c${index + 1}`,
+        label: `${templates[index % templates.length]}${index >= templates.length ? ` ${Math.floor(index / templates.length) + 1}` : ''}`,
+        category: index % 2 === 0 ? (subject.toLowerCase().includes('computer') ? 'Data' : 'Concept') : subject.toLowerCase().includes('computer') ? 'Control' : 'Application',
+      })),
     };
   }
 
-  function createCauseEffectPairs(subject: string) {
-    return [
+  function createCauseEffectPairs(subject: string, count = 3) {
+    const templates = [
       { cause: `Strong foundation in ${subject.toLowerCase()} concepts`, effect: 'Higher confidence in solving tasks' },
       { cause: 'Regular formative feedback', effect: 'Faster learning adjustments' },
       { cause: 'Collaborative practice sessions', effect: 'Better problem-solving quality' },
+      { cause: 'Clear worked examples', effect: 'Improved transfer to new problems' },
+      { cause: 'Short review cycles', effect: 'Stronger long-term retention' },
+      { cause: 'Targeted practice', effect: 'More accurate answers under pressure' },
     ];
+
+    return Array.from({ length: count }, (_, index) => {
+      const template = templates[index % templates.length];
+      const suffix = index >= templates.length ? ` ${Math.floor(index / templates.length) + 1}` : '';
+      return {
+        cause: `${template.cause}${suffix}`,
+        effect: template.effect,
+      };
+    });
   }
 
-  function createMapPoints(subject: string) {
-    return [
-      { id: 'p1', location: 'Point A', label: `${subject} Concept Hub` },
-      { id: 'p2', location: 'Point B', label: 'Practice Zone' },
-      { id: 'p3', location: 'Point C', label: 'Assessment Checkpoint' },
+  function createMapPoints(subject: string, count = 3) {
+    const templates = [
+      `${subject} Concept Hub`,
+      'Practice Zone',
+      'Assessment Checkpoint',
+      'Feedback Station',
+      'Revision Corner',
+      'Challenge Path',
     ];
+
+    return Array.from({ length: count }, (_, index) => ({
+      id: `p${index + 1}`,
+      location: `Point ${String.fromCharCode(65 + index)}`,
+      label: `${templates[index % templates.length]}${index >= templates.length ? ` ${Math.floor(index / templates.length) + 1}` : ''}`,
+    }));
   }
 
-  function createDebateMock(subject: string) {
+  function createDebateMock(subject: string, count = 4) {
+    const templates = [
+      { text: 'Student engagement rises in applied tasks.', supports: true },
+      { text: 'No planning is required for projects.', supports: false },
+      { text: 'Concept retention improves with active practice.', supports: true },
+      { text: 'Assessment quality always decreases.', supports: false },
+      { text: 'Feedback helps students refine their reasoning.', supports: true },
+      { text: 'All evidence should be ignored in debate prep.', supports: false },
+    ];
+
     return {
       claim: `Schools should increase project-based ${subject.toLowerCase()} learning time.`,
-      evidence: [
-        { id: 'd1', text: 'Student engagement rises in applied tasks.', supports: true },
-        { id: 'd2', text: 'No planning is required for projects.', supports: false },
-        { id: 'd3', text: 'Concept retention improves with active practice.', supports: true },
-        { id: 'd4', text: 'Assessment quality always decreases.', supports: false },
-      ],
+      evidence: Array.from({ length: count }, (_, index) => ({
+        id: `d${index + 1}`,
+        text: templates[index % templates.length].text,
+        supports: templates[index % templates.length].supports,
+      })),
     };
   }
 
@@ -1567,6 +1690,12 @@ export default function Home() {
     return new Promise<Omit<TestActivity, 'id'>>((resolve) => {
       setTimeout(() => {
         const activityType = detectActivityType(promptText);
+        const requestedQuestions = parseRequestedCount(promptText, 5, 1, 10);
+        const requestedItems = parseRequestedCount(promptText, 4, 2, 10);
+        const requestedSequence = parseRequestedCount(promptText, 5, 2, 10);
+        const requestedBlanks = parseRequestedCount(promptText, 2, 2, 4);
+        const requestedScenarioNodes = parseRequestedCount(promptText, 4, 3, 6);
+        const requestedEvidence = parseRequestedCount(promptText, 4, 2, 8);
 
         if (activityType === 'matching') {
           resolve({
@@ -1574,7 +1703,7 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 180,
-            matchingPairs: createMockMatchingPairs(subject),
+            matchingPairs: createMockMatchingPairs(subject, requestedItems),
           });
           return;
         }
@@ -1585,13 +1714,13 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 150,
-            orderingItems: createMockOrderingItems(subject),
+            orderingItems: createMockOrderingItems(subject, requestedSequence),
           });
           return;
         }
 
         if (activityType === 'fill-blank') {
-          const fill = createFillBlankMock(subject);
+          const fill = createFillBlankMock(subject, requestedBlanks);
           resolve({
             title: buildActivityName(subject, promptText),
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
@@ -1610,7 +1739,7 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 180,
-            scenarioNodes: createScenarioNodes(subject),
+            scenarioNodes: createScenarioNodes(subject, requestedScenarioNodes),
           });
           return;
         }
@@ -1621,13 +1750,13 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 90,
-            speedQuestions: createMockQuestions(subject, promptText),
+            speedQuestions: createMockQuestions(subject, promptText, requestedQuestions),
           });
           return;
         }
 
         if (activityType === 'classification') {
-          const classification = createClassificationMock(subject);
+          const classification = createClassificationMock(subject, requestedItems);
           resolve({
             title: buildActivityName(subject, promptText),
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
@@ -1640,7 +1769,7 @@ export default function Home() {
         }
 
         if (activityType === 'cause-effect') {
-          const pairs = createCauseEffectPairs(subject);
+          const pairs = createCauseEffectPairs(subject, requestedEvidence);
           resolve({
             title: buildActivityName(subject, promptText),
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
@@ -1657,13 +1786,13 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 180,
-            memoryPairs: createMockMatchingPairs(subject),
+            memoryPairs: createMockMatchingPairs(subject, requestedItems),
           });
           return;
         }
 
         if (activityType === 'debate') {
-          const debate = createDebateMock(subject);
+          const debate = createDebateMock(subject, requestedEvidence);
           resolve({
             title: buildActivityName(subject, promptText),
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
@@ -1681,7 +1810,7 @@ export default function Home() {
             instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
             activityType,
             timeLimitSec: 120,
-            teamBattleQuestions: createMockQuestions(subject, promptText),
+            teamBattleQuestions: createMockQuestions(subject, promptText, requestedQuestions),
           });
           return;
         }
@@ -1691,7 +1820,7 @@ export default function Home() {
           instructionSummary: `Generated from instruction: "${promptText.trim()}"`,
           activityType,
           timeLimitSec: 0,
-          questions: createMockQuestions(subject, promptText),
+          questions: createMockQuestions(subject, promptText, requestedQuestions),
         });
       }, 600);
     });
