@@ -148,6 +148,33 @@ type TestActivity = {
   teamBattleQuestions?: TestQuestion[];
 };
 
+type InteractiveLabLayout = {
+  id: string;
+  name: string;
+  description: string;
+  compareFocus: string;
+};
+
+type InteractiveLabPlan = {
+  mode: 'lab' | 'quiz';
+  title: string;
+  summary: string;
+  reason: string;
+  personalizationHint: string;
+  lab?: {
+    objective: string;
+    comparePrompt: string;
+    layouts: InteractiveLabLayout[];
+    studentSteps: string[];
+    ratingScale: string[];
+    reflectionQuestions: string[];
+  };
+  quiz?: {
+    suggestedPrompt: string;
+    note: string;
+  };
+};
+
 function SortableTimelineItem({ id, label }: { id: string; label: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
@@ -243,6 +270,391 @@ const PRESET_STUDENT_ID_MAP: Record<string, string> = {
   '28000000d': '550e8400-e29b-41d4-a716-446655440103',
 };
 
+const INITIAL_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    role: 'assistant',
+    content:
+      'I am your virtual teacher. Ask about lecture concepts, assignment structure, or Padlet discussion themes for this course.',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+type DashboardFeatureKey =
+  | 'dashboard'
+  | 'virtual-teacher'
+  | 'upload-center'
+  | 'course-data'
+  | 'group-management'
+  | 'clibot-edu';
+
+type SidebarPosition = 'left' | 'right';
+
+type FeatureMenuKey = DashboardFeatureKey | 'custom';
+
+const FEATURE_MENU_ITEMS: { id: FeatureMenuKey; label: string; description: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', description: 'View course overview, stats, and recent activity.' },
+  {
+    id: 'virtual-teacher',
+    label: 'Virtual Teacher',
+    description: 'Chat with AI for course concepts and guidance.',
+  },
+  {
+    id: 'upload-center',
+    label: 'Upload Center',
+    description: 'Upload, preview, summarize, rename, and delete files.',
+  },
+  { id: 'course-data', label: 'Course Data', description: 'Browse materials, assignments, and grades.' },
+  {
+    id: 'group-management',
+    label: 'Group Management',
+    description: 'Create projects and manage group allocation.',
+  },
+  {
+    id: 'clibot-edu',
+    label: 'Clibot Edu',
+    description: 'Generate and run AI-powered classroom activities.(Generate Interactive Lab)',
+  },
+  { id: 'custom', label: 'Custom', description: 'Show multiple selected functions on one page.' },
+];
+
+const FEATURE_SEARCH_KEYWORDS: Record<FeatureMenuKey, string[]> = {
+  dashboard: ['overview', 'stats', 'recent activity', 'course summary', 'subject'],
+  'virtual-teacher': ['chat', 'ai', 'question', 'lecture', 'assignment', 'padlet', 'guidance'],
+  'upload-center': ['upload', 'preview', 'summarize', 'rename', 'delete', 'file'],
+  'course-data': ['materials', 'assignments', 'grades', 'faq', 'keypoints', 'quiz'],
+  'group-management': ['project', 'group', 'allocation', 'student', 'capacity', 'member'],
+  'clibot-edu': ['interactive lab', 'generate test', 'quiz', 'matching', 'ordering', 'personalize'],
+  custom: ['multi function', 'layout', 'combined view', 'reorder'],
+};
+
+const DEFAULT_CUSTOM_LAYOUT: DashboardFeatureKey[] = [
+  'dashboard',
+  'virtual-teacher',
+  'upload-center',
+  'course-data',
+  'group-management',
+  'clibot-edu',
+];
+
+type DashboardActivity = {
+  id: string;
+  title: string;
+  detail: string;
+  timestamp: string;
+  kind: 'file' | 'material' | 'assignment' | 'grade' | 'project';
+};
+
+type DashboardStat = {
+  label: string;
+  value: string;
+  hint: string;
+};
+
+function getValidTimestamp(value?: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function buildDashboardActivityFeed(
+  selectedCourse: (typeof COURSES)[number],
+  files: FileItem[],
+  materials: CourseMaterial[],
+  assignments: Assignment[],
+  grades: Grade[],
+  projects: ProjectItem[],
+) {
+  const feed: DashboardActivity[] = [];
+
+  files.slice(0, 3).forEach((file) => {
+    const timestamp = getValidTimestamp(file.updated_at || file.created_at);
+    if (!timestamp) return;
+    feed.push({
+      id: `file-${file.path}`,
+      title: 'New file uploaded',
+      detail: `${stripTimestampPrefix(basename(file.name || file.path))} is ready in ${selectedCourse.code}`,
+      timestamp,
+      kind: 'file',
+    });
+  });
+
+  materials.slice(0, 2).forEach((material) => {
+    const timestamp = getValidTimestamp(material.updated_at || material.created_at);
+    if (!timestamp) return;
+    feed.push({
+      id: `material-${material.id}`,
+      title: 'Course material added',
+      detail: `${material.title} is available for ${selectedCourse.code}`,
+      timestamp,
+      kind: 'material',
+    });
+  });
+
+  assignments.slice(0, 2).forEach((assignment) => {
+    const timestamp = getValidTimestamp(assignment.updated_at || assignment.created_at);
+    if (!timestamp) return;
+    feed.push({
+      id: `assignment-${assignment.id}`,
+      title: 'Assignment published',
+      detail: `${assignment.title} is open until ${formatDateTime(assignment.due_date)}`,
+      timestamp,
+      kind: 'assignment',
+    });
+  });
+
+  grades.slice(0, 2).forEach((grade) => {
+    const timestamp = getValidTimestamp(grade.updated_at || grade.created_at);
+    if (!timestamp) return;
+    feed.push({
+      id: `grade-${grade.id}`,
+      title: 'Grade updated',
+      detail: `Assessment progress is now ${grade.percentage}% for ${selectedCourse.code}`,
+      timestamp,
+      kind: 'grade',
+    });
+  });
+
+  projects.slice(0, 2).forEach((project) => {
+    const timestamp = getValidTimestamp(project.updated_at || project.created_at);
+    if (!timestamp) return;
+    feed.push({
+      id: `project-${project.id}`,
+      title: 'Study project updated',
+      detail: `${project.name} is ${project.status} for ${selectedCourse.code}`,
+      timestamp,
+      kind: 'project',
+    });
+  });
+
+  return feed
+    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+    .slice(0, 8);
+}
+
+function DashboardOverview({
+  selectedCourse,
+  selectedCourseId,
+  courses,
+  dashboardStats,
+  dashboardActivity,
+  onSelectCourse,
+}: {
+  selectedCourse: (typeof COURSES)[number];
+  selectedCourseId: string;
+  courses: typeof COURSES;
+  dashboardStats: DashboardStat[];
+  dashboardActivity: DashboardActivity[];
+  onSelectCourse: (courseId: string) => void;
+}) {
+  return (
+    <section id="dashboard" className="dashboard-grid">
+      <motion.article
+        className="card dashboard-hero"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+        <div>
+          <p className="eyebrow">Dashboard</p>
+          <h2>Learning pulse for {selectedCourse.code}</h2>
+          <p>{selectedCourse.objective}</p>
+        </div>
+        <div className="dashboard-hero-meta">
+          <span>{selectedCourse.lecturer}</span>
+          <span>{dashboardActivity.length} recent updates</span>
+          <span>{selectedCourse.resources.length} core resources</span>
+        </div>
+      </motion.article>
+
+      <article className="card dashboard-panel">
+        <div className="card-head">
+          <h3>Available subjects</h3>
+          <span>{courses.length} courses</span>
+        </div>
+        <div className="subject-grid">
+          {courses.map((course) => {
+            const isActive = course.id === selectedCourseId;
+            return (
+              <button
+                key={course.id}
+                className={`subject-card ${isActive ? 'active' : ''}`}
+                onClick={() => onSelectCourse(course.id)}
+              >
+                <strong>{course.code}</strong>
+                <span>{course.name}</span>
+                <small>{course.lecturer}</small>
+              </button>
+            );
+          })}
+        </div>
+      </article>
+
+      <article className="card dashboard-panel">
+        <div className="card-head">
+          <h3>Recent activity</h3>
+          <span>Latest course updates</span>
+        </div>
+        <div className="activity-feed">
+          {dashboardActivity.length === 0 ? (
+            <p className="dashboard-empty">No recent activity yet. Upload a file or publish course content to populate this feed.</p>
+          ) : (
+            dashboardActivity.map((item) => (
+              <div key={item.id} className={`activity-item ${item.kind}`}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <p>{item.detail}</p>
+                </div>
+                <small>{formatDateTime(item.timestamp)}</small>
+              </div>
+            ))
+          )}
+        </div>
+      </article>
+
+      <article className="card dashboard-panel">
+        <div className="card-head">
+          <h3>At a glance</h3>
+          <span>Overview metrics</span>
+        </div>
+        <div className="stats-grid">
+          {dashboardStats.map((stat) => (
+            <div key={stat.label} className="stat-card">
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+              <small>{stat.hint}</small>
+            </div>
+          ))}
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function HeroSettingsPanel({
+  featureLabelMap,
+  featureMenuOrder,
+  shiftMenuItem,
+  customEditMode,
+  onToggleCustomEditMode,
+  toggleCustomLayoutFeature,
+  shiftCustomLayoutFeature,
+  customLayout,
+  sidebarPosition,
+  onChangeSidebarPosition,
+}: {
+  featureLabelMap: Record<FeatureMenuKey, string>;
+  featureMenuOrder: FeatureMenuKey[];
+  shiftMenuItem: (featureId: FeatureMenuKey, direction: 'up' | 'down') => void;
+  customEditMode: boolean;
+  onToggleCustomEditMode: () => void;
+  toggleCustomLayoutFeature: (featureId: DashboardFeatureKey) => void;
+  shiftCustomLayoutFeature: (featureId: DashboardFeatureKey, direction: 'up' | 'down') => void;
+  customLayout: DashboardFeatureKey[];
+  sidebarPosition: SidebarPosition;
+  onChangeSidebarPosition: (position: SidebarPosition) => void;
+}) {
+  return (
+    <div className="hero-settings-panel-content">
+      <div className="sidebar-panel sidebar-settings">
+        <div className="card-head">
+          <h2>Menu settings</h2>
+          <span>Adjust button position</span>
+        </div>
+        <div className="menu-settings-list">
+          {featureMenuOrder.map((featureId, index) => (
+            <div key={`menu-setting-${featureId}`} className="menu-settings-item">
+              <span>{featureLabelMap[featureId]}</span>
+              <div className="menu-settings-actions">
+                <button
+                  className="small ghost"
+                  onClick={() => shiftMenuItem(featureId, 'up')}
+                  disabled={index === 0}
+                >
+                  Up
+                </button>
+                <button
+                  className="small ghost"
+                  onClick={() => shiftMenuItem(featureId, 'down')}
+                  disabled={index === featureMenuOrder.length - 1}
+                >
+                  Down
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="sidebar-panel sidebar-settings">
+        <div className="card-head">
+          <h2>Custom page</h2>
+          <span>Default main page</span>
+        </div>
+        <p className="status">Enable multiple functions in one page and edit their order.</p>
+        <div className="controls">
+          <button className="small" onClick={onToggleCustomEditMode}>
+            {customEditMode ? 'Done Editing' : 'Edit Custom Layout'}
+          </button>
+        </div>
+        {customEditMode && (
+          <div className="custom-layout-editor">
+            {DEFAULT_CUSTOM_LAYOUT.map((featureId) => {
+              const active = customLayout.includes(featureId);
+              const position = customLayout.indexOf(featureId);
+              return (
+                <div key={`custom-layout-${featureId}`} className="custom-layout-item">
+                  <label>
+                    <input type="checkbox" checked={active} onChange={() => toggleCustomLayoutFeature(featureId)} />
+                    {featureLabelMap[featureId]}
+                  </label>
+                  <div className="menu-settings-actions">
+                    <button
+                      className="small ghost"
+                      onClick={() => shiftCustomLayoutFeature(featureId, 'up')}
+                      disabled={!active || position <= 0}
+                    >
+                      Up
+                    </button>
+                    <button
+                      className="small ghost"
+                      onClick={() => shiftCustomLayoutFeature(featureId, 'down')}
+                      disabled={!active || position === -1 || position >= customLayout.length - 1}
+                    >
+                      Down
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="sidebar-panel sidebar-settings">
+        <div className="card-head">
+          <h2>Sidebar position</h2>
+        </div>
+        <label className="sidebar-position-switch" htmlFor="sidebar-position-switch">
+          <span className="sidebar-position-switch-copy">
+            <strong>{sidebarPosition === 'right' ? 'Right side on' : 'Right side off'}</strong>
+            <small>{sidebarPosition === 'right' ? 'Mirror sidebar (right side)' : 'Sidebar stays on the left'}</small>
+          </span>
+          <input
+            id="sidebar-position-switch"
+            type="checkbox"
+            checked={sidebarPosition === 'right'}
+            onChange={(e) => onChangeSidebarPosition(e.target.checked ? 'right' : 'left')}
+          />
+          <span className="sidebar-position-switch-track" aria-hidden="true">
+            <span className="sidebar-position-switch-thumb" />
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [selectedCourseId, setSelectedCourseId] = useState(COURSES[0].id);
   const selectedCourse = useMemo(
@@ -288,14 +700,7 @@ export default function Home() {
 
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content:
-        'I am your virtual teacher. Ask about lecture concepts, assignment structure, or Padlet discussion themes for this course.',
-      createdAt: '2026-01-01T00:00:00.000Z',
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
 
   const [testPromptInput, setTestPromptInput] = useState('');
   const [testStatus, setTestStatus] = useState('Waiting for instruction');
@@ -334,9 +739,161 @@ export default function Home() {
   const [speedCorrectCount, setSpeedCorrectCount] = useState(0);
   const [speedComboPulse, setSpeedComboPulse] = useState(0);
   const [activityScores, setActivityScores] = useState<Record<string, number>>({});
+  const [interactiveLabInput, setInteractiveLabInput] = useState('');
+  const [interactiveLabGenerating, setInteractiveLabGenerating] = useState(false);
+  const [interactiveLabPlan, setInteractiveLabPlan] = useState<InteractiveLabPlan | null>(null);
+  const [interactiveLabRatings, setInteractiveLabRatings] = useState<Record<string, number>>({});
+  const [labStatus, setLabStatus] = useState('');
   const [personalizeInput, setPersonalizeInput] = useState('');
   const [personalizedStore, setPersonalizedStore] = useState<Record<string, TestActivity[]>>({});
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const [featureMenuOrder, setFeatureMenuOrder] = useState<FeatureMenuKey[]>(
+    FEATURE_MENU_ITEMS.map((item) => item.id),
+  );
+  const [activeFeature, setActiveFeature] = useState<FeatureMenuKey>('custom');
+  const [customLayout, setCustomLayout] = useState<DashboardFeatureKey[]>(DEFAULT_CUSTOM_LAYOUT);
+  const [customEditMode, setCustomEditMode] = useState(false);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
+  const [sidebarPosition, setSidebarPosition] = useState<SidebarPosition>('left');
+  const [featureSearchQuery, setFeatureSearchQuery] = useState('');
+
+  const featureLabelMap = useMemo<Record<FeatureMenuKey, string>>(
+    () =>
+      FEATURE_MENU_ITEMS.reduce(
+        (acc, item) => {
+          acc[item.id] = item.label;
+          return acc;
+        },
+        {} as Record<FeatureMenuKey, string>,
+      ),
+    [],
+  );
+
+  const featureDescriptionMap = useMemo<Record<FeatureMenuKey, string>>(
+    () =>
+      FEATURE_MENU_ITEMS.reduce(
+        (acc, item) => {
+          acc[item.id] = item.description;
+          return acc;
+        },
+        {} as Record<FeatureMenuKey, string>,
+      ),
+    [],
+  );
+
+  const matchedFeatureMenu = useMemo(() => {
+    const keywords = featureSearchQuery
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (keywords.length === 0) return [] as FeatureMenuKey[];
+
+    return featureMenuOrder.filter((featureId) => {
+      const label = featureLabelMap[featureId]?.toLowerCase() || '';
+      const description = featureDescriptionMap[featureId]?.toLowerCase() || '';
+      const searchKeywords = FEATURE_SEARCH_KEYWORDS[featureId]?.join(' ').toLowerCase() || '';
+      const haystack = `${label} ${description} ${featureId} ${searchKeywords}`;
+      return keywords.some((keyword) => haystack.includes(keyword));
+    });
+  }, [featureSearchQuery, featureMenuOrder, featureLabelMap, featureDescriptionMap]);
+
+  const isFeatureSearchActive = featureSearchQuery.trim().length > 0;
+  const visibleFeatureMenu = isFeatureSearchActive ? matchedFeatureMenu : featureMenuOrder;
+
+  const shiftMenuItem = useCallback((featureId: FeatureMenuKey, direction: 'up' | 'down') => {
+    setFeatureMenuOrder((prev) => {
+      const index = prev.indexOf(featureId);
+      if (index === -1) return prev;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      return arrayMove(prev, index, target);
+    });
+  }, []);
+
+  const toggleCustomLayoutFeature = useCallback((featureId: DashboardFeatureKey) => {
+    setCustomLayout((prev) => {
+      if (prev.includes(featureId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== featureId);
+      }
+      return [...prev, featureId];
+    });
+  }, []);
+
+  const shiftCustomLayoutFeature = useCallback((featureId: DashboardFeatureKey, direction: 'up' | 'down') => {
+    setCustomLayout((prev) => {
+      const index = prev.indexOf(featureId);
+      if (index === -1) return prev;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+      return arrayMove(prev, index, target);
+    });
+  }, []);
+
+  const renderedFeatures = useMemo<DashboardFeatureKey[]>(
+    () => (activeFeature === 'custom' ? customLayout : [activeFeature]),
+    [activeFeature, customLayout],
+  );
+
+  const shouldRenderFeature = useCallback(
+    (featureId: DashboardFeatureKey) => renderedFeatures.includes(featureId),
+    [renderedFeatures],
+  );
+
+  const dashboardActivity = useMemo(
+    () => buildDashboardActivityFeed(selectedCourse, files, materials, assignments, grades, projects),
+    [selectedCourse, files, materials, assignments, grades, projects],
+  );
+
+  const dashboardStats = useMemo<DashboardStat[]>(
+    () => [
+      {
+        label: 'Available subjects',
+        value: String(COURSES.length),
+        hint: `${selectedCourse.code} is active`,
+      },
+      {
+        label: 'Files',
+        value: String(files.length),
+        hint: 'Uploaded course files',
+      },
+      {
+        label: 'Materials',
+        value: String(materials.length),
+        hint: 'Lecture and reference assets',
+      },
+      {
+        label: 'Assignments',
+        value: String(assignments.length),
+        hint: 'Open assessment items',
+      },
+      {
+        label: 'Grades',
+        value: String(grades.length),
+        hint: 'Recorded grade entries',
+      },
+      {
+        label: 'Projects',
+        value: String(projects.length),
+        hint: 'Active group projects',
+      },
+    ],
+    [assignments.length, files.length, grades.length, materials.length, projects.length, selectedCourse.code],
+  );
+
+  const handleCourseChange = useCallback(
+    (courseId: string) => {
+      setSelectedCourseId(courseId);
+      setActiveTestId(null);
+      setTestStatus('Waiting for instruction');
+      setLabStatus('');
+      setChatMessages(INITIAL_CHAT_MESSAGES);
+      setInteractiveLabPlan(null);
+      setInteractiveLabRatings({});
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchList();
@@ -801,6 +1358,28 @@ export default function Home() {
     return `${subject} Test - ${shortPrompt}`;
   }
 
+  function buildStudentReactionHistory() {
+    const history: { title: string; activityType: ActivityType; score: number }[] = [];
+
+    currentCourseActivities.forEach((activity) => {
+      const score = activityScores[activity.id];
+      if (typeof score === 'number') {
+        history.push({
+          title: activity.title,
+          activityType: activity.activityType,
+          score,
+        });
+      }
+    });
+
+    return history.sort((a, b) => b.score - a.score).slice(0, 5);
+  }
+
+  function applyQuizFallbackPrompt(prompt: string) {
+    setTestPromptInput(prompt);
+    setTestStatus('Quiz prompt prepared. Use Generate Test to continue.');
+  }
+
   function shuffleArray<T>(items: T[]): T[] {
     const copy = [...items];
     for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -1150,6 +1729,48 @@ export default function Home() {
     }
   }
 
+  async function handleGenerateInteractiveLab() {
+    const instruction = interactiveLabInput.trim();
+    if (!instruction || interactiveLabGenerating) {
+      if (!instruction) setLabStatus('Please enter an interactive lab instruction');
+      return;
+    }
+
+    setInteractiveLabGenerating(true);
+    setLabStatus('Generating interactive lab...');
+
+    try {
+      const recentHistory = buildStudentReactionHistory();
+      const res = await fetch(`/api/courses/${encodeURIComponent(selectedCourseId)}/interactive-labs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instruction,
+          history: recentHistory,
+          averageScore: averageCourseScore,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data = (await res.json()) as InteractiveLabPlan & { source?: string };
+      setInteractiveLabPlan(data);
+      setInteractiveLabRatings({});
+      setInteractiveLabInput('');
+
+      if (data.mode === 'quiz') {
+        setLabStatus('No suitable interactive game. Use Generate Test for the quiz version.');
+      } else {
+        setLabStatus('Interactive lab generated');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setLabStatus(`Interactive lab generation failed: ${message}`);
+    } finally {
+      setInteractiveLabGenerating(false);
+    }
+  }
+
   const currentCourseActivities = testStore[selectedCourseId] || [];
   const currentPersonalizedActivities = personalizedStore[selectedCourseId] || [];
   const currentActivityEntries = currentCourseActivities.flatMap((activity) => [
@@ -1207,6 +1828,14 @@ export default function Home() {
     setPersonalizeInput('');
     setTestStatus('Personalized activity created');
   }
+
+  const labAverageRating =
+    interactiveLabPlan?.lab && Object.keys(interactiveLabRatings).length > 0
+      ? Math.round(
+          Object.values(interactiveLabRatings).reduce((sum, value) => sum + value, 0) /
+            Object.values(interactiveLabRatings).length,
+        )
+      : null;
 
   useEffect(() => {
     setMatchingSelectedPrompt(null);
@@ -1774,63 +2403,189 @@ export default function Home() {
 
   return (
     <main className="platform">
-      <nav className="top-anchor-nav card" aria-label="Feature navigation">
-        <a href="#virtual-teacher">Virtual Teacher</a>
-        <a href="#upload-center">Upload Center</a>
-        <a href="#course-data">Course Data</a>
-        <a href="#group-management">Group Management</a>
-        <a href="#clibot-edu">Clibot Edu</a>
-      </nav>
+      <div className={`layout-shell ${sidebarPosition === 'right' ? 'sidebar-right' : ''}`}>
+        <aside className="sidebar card">
+          <div className="sidebar-header">
+            <p className="eyebrow"></p>
+            <h1>EduAI Platform</h1>
+            <p>Track subjects, recent activity, and teaching tools from one full-size control panel.</p>
+          </div>
 
-      <section className="toolbar card">
-        <label htmlFor="course-select">Select course</label>
-        <select
-          id="course-select"
-          value={selectedCourseId}
-          onChange={(e) => {
-            setSelectedCourseId(e.target.value);
-            setActiveTestId(null);
-            setTestStatus('Waiting for instruction');
-            setChatMessages([
-              {
-                role: 'assistant',
-                content:
-                  'I am your virtual teacher. Ask about lecture concepts, assignment structure, or Padlet discussion themes for this course.',
-                createdAt: '2026-01-01T00:00:00.000Z',
-              },
-            ]);
-          }}
-        >
-          {COURSES.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.code} - {course.name}
-            </option>
-          ))}
-        </select>
-        <p className="status">
-          {status}
-          {loading ? ' (loading...)' : ''}
-        </p>
-      </section>
+          <div className="sidebar-panel">
+            <label htmlFor="course-select">Select course</label>
+            <select
+              id="course-select"
+              value={selectedCourseId}
+              onChange={(e) => handleCourseChange(e.target.value)}
+            >
+              {COURSES.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.code} - {course.name}
+                </option>
+              ))}
+            </select>
+            <p className="status">
+              {status}
+              {loading ? ' (loading...)' : ''}
+            </p>
+          </div>
 
-      <header className="hero">
-        <div>
-          <p className="eyebrow">EduAI Learning Platform</p>
-          <h1>Teacher-guided GenAI Learning Experience</h1>
-          <p>
-            Student-centered, course-specific support powered by uploaded materials, lecture context, and
-            assessment criteria.
-          </p>
-        </div>
-        <div className="hero-badge">
-          <span>Active Course</span>
-          <strong>{selectedCourse.code}</strong>
-          <small>{selectedCourse.name}</small>
-        </div>
-      </header>
+          <nav className="top-anchor-nav sidebar-nav" aria-label="Feature navigation">
+            <div className="feature-search-box">
+              <label htmlFor="feature-search-input">Search functions</label>
+              <input
+                id="feature-search-input"
+                type="search"
+                value={featureSearchQuery}
+                onChange={(e) => setFeatureSearchQuery(e.target.value)}
+                placeholder="Try: teacher, upload, group..."
+              />
+              {featureSearchQuery.trim() && (
+                <div className="feature-search-results" role="listbox" aria-label="Matched platform functions">
+                  {matchedFeatureMenu.length > 0 ? (
+                    matchedFeatureMenu.map((featureId) => (
+                      <button
+                        key={`search-${featureId}`}
+                        type="button"
+                        className="feature-search-result"
+                        onClick={() => {
+                          setActiveFeature(featureId);
+                          setFeatureSearchQuery('');
+                          setSettingsPanelOpen(false);
+                        }}
+                      >
+                        <span className="feature-search-result-label">{featureLabelMap[featureId]}</span>
+                        <small>{featureDescriptionMap[featureId]}</small>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="feature-search-empty">No matching functions found.</p>
+                  )}
+                </div>
+              )}
+            </div>
 
-      <section className="grid-layout">
-        <article id="virtual-teacher" className="card chat-card">
+            {!isFeatureSearchActive && visibleFeatureMenu.map((featureId) => (
+              <button
+                key={featureId}
+                className={`feature-nav-btn ${activeFeature === featureId ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveFeature(featureId);
+                  setSettingsPanelOpen(false);
+                }}
+              >
+                <span className="feature-nav-copy">
+                  <span className="feature-nav-label">{featureLabelMap[featureId]}</span>
+                  <span><small className="feature-nav-description">{featureDescriptionMap[featureId]}</small></span>
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="sidebar-panel sidebar-summary">
+            <div className="card-head">
+              <h2>{selectedCourse.code}</h2>
+              <span>{selectedCourse.lecturer}</span>
+            </div>
+            <p>{selectedCourse.name}</p>
+            <small>{selectedCourse.resources.length} core resources available</small>
+          </div>
+        </aside>
+
+        <div className="page-content">
+          <header className="hero">
+            <div className="hero-copy">
+              <p className="eyebrow">EduAI Learning Platform</p>
+              <h1>Teacher-guided GenAI Learning Experience</h1>
+              <p>
+                Student-centered, course-specific support powered by uploaded materials, lecture context, and
+                assessment criteria.
+              </p>
+            </div>
+
+            <div className="hero-controls">
+              <button
+                type="button"
+                className="hero-settings-button"
+                aria-label={settingsPanelOpen ? 'Close settings' : 'Open settings'}
+                aria-expanded={settingsPanelOpen}
+                aria-controls="hero-settings-screen"
+                onClick={() => setSettingsPanelOpen((prev) => !prev)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 8.75A3.25 3.25 0 1 0 12 15.25 3.25 3.25 0 0 0 12 8.75Zm8.25 3.25c0-.35-.02-.7-.07-1.04l2-1.56-1.93-3.34-2.42.98a8.33 8.33 0 0 0-1.8-1.04L15.62 3h-3.84l-.41 2.95c-.64.2-1.25.5-1.8.86l-2.34-.93-1.93 3.34 1.92 1.48c-.05.36-.08.73-.08 1.09 0 .36.03.73.08 1.09L3.3 14.36l1.93 3.34 2.34-.93c.55.36 1.16.66 1.8.86l.41 2.95h3.84l.42-2.95c.64-.2 1.24-.5 1.8-.86l2.42.98 1.93-3.34-2-1.56c.05-.34.07-.69.07-1.04ZM12 16.75A4.75 4.75 0 1 1 12 7.25a4.75 4.75 0 0 1 0 9.5Z" />
+                </svg>
+              </button>
+
+              <div className="hero-badge">
+                <span>Active Course</span>
+                <strong>{selectedCourse.code}</strong>
+                <small>{selectedCourse.name}</small>
+              </div>
+            </div>
+          </header>
+
+          {settingsPanelOpen && (
+            <section id="hero-settings-screen" className="hero-settings-screen card">
+              <div className="card-head">
+                <h2>Platform Settings</h2>
+                <button type="button" className="small ghost" onClick={() => setSettingsPanelOpen(false)}>
+                  Back to Platform
+                </button>
+              </div>
+              <HeroSettingsPanel
+                featureLabelMap={featureLabelMap}
+                featureMenuOrder={featureMenuOrder}
+                shiftMenuItem={shiftMenuItem}
+                customEditMode={customEditMode}
+                onToggleCustomEditMode={() => setCustomEditMode((prev) => !prev)}
+                toggleCustomLayoutFeature={toggleCustomLayoutFeature}
+                shiftCustomLayoutFeature={shiftCustomLayoutFeature}
+                customLayout={customLayout}
+                sidebarPosition={sidebarPosition}
+                onChangeSidebarPosition={setSidebarPosition}
+              />
+            </section>
+          )}
+
+          {!settingsPanelOpen && shouldRenderFeature('dashboard') && (
+            <>
+              <DashboardOverview
+                selectedCourse={selectedCourse}
+                selectedCourseId={selectedCourseId}
+                courses={COURSES}
+                dashboardStats={dashboardStats}
+                dashboardActivity={dashboardActivity}
+                onSelectCourse={handleCourseChange}
+              />
+
+              <section className="toolbar card">
+                <label htmlFor="course-select-toolbar">Current course</label>
+                <select
+                  id="course-select-toolbar"
+                  value={selectedCourseId}
+                  onChange={(e) => {
+                    handleCourseChange(e.target.value);
+                  }}
+                >
+                  {COURSES.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.code} - {course.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="status">
+                  {status}
+                  {loading ? ' (loading...)' : ''}
+                </p>
+              </section>
+            </>
+          )}
+
+          {!settingsPanelOpen && (shouldRenderFeature('virtual-teacher') || shouldRenderFeature('upload-center')) && (
+            <section className="grid-layout">
+        {shouldRenderFeature('virtual-teacher') && (
+          <article id="virtual-teacher" className="card chat-card">
           <div className="card-head">
             <h2>Virtual Teacher</h2>
             <span>{selectedCourse.lecturer}</span>
@@ -1861,8 +2616,10 @@ export default function Home() {
               {chatLoading ? 'Thinking...' : 'Send'}
             </button>
           </div>
-        </article>
+          </article>
+        )}
 
+        {shouldRenderFeature('upload-center') && (
         <article id="upload-center" className="card upload-card">
           <div className="card-head">
             <h2>Upload Center</h2>
@@ -1953,8 +2710,11 @@ export default function Home() {
             </table>
           </div>
         </article>
+        )}
       </section>
+          )}
 
+      {!settingsPanelOpen && shouldRenderFeature('course-data') && (
       <section id="course-data" className="grid-secondary">
         <article className="card">
           <div className="card-head">
@@ -2055,7 +2815,9 @@ export default function Home() {
           )}
         </article>
       </section>
+      )}
 
+      {!settingsPanelOpen && shouldRenderFeature('group-management') && (
       <section className="grid-layout">
         <article id="group-management" className="card">
           <div className="card-head">
@@ -2184,7 +2946,9 @@ export default function Home() {
           </div>
         </article>
       </section>
+      )}
 
+      {!settingsPanelOpen && shouldRenderFeature('clibot-edu') && (
       <section id="clibot-edu" className="card teacher-test-section">
         <div className="teacher-test-left">
           <div className="teacher-test-current-subject">Current Course: {selectedCourse.code}</div>
@@ -2262,6 +3026,127 @@ export default function Home() {
                 Personalize
               </button>
             </div>
+          </div>
+
+          <div className="teacher-test-prompt teacher-lab-panel">
+            <label htmlFor="interactive-lab-input">Generate Interactive Lab</label>
+            <textarea
+              id="interactive-lab-input"
+              value={interactiveLabInput}
+              onChange={(e) => setInteractiveLabInput(e.target.value)}
+              rows={4}
+              placeholder="Example: Create an HCI lab where students compare two UI layouts, rate clarity, and explain which design is better for beginners."
+            />
+            <div className="teacher-test-prompt-actions">
+              <p>
+                Ask for a compare-and-rate lab or tutorial. If the topic is not suitable, the AI will suggest using the
+                quiz generator instead.
+              </p>
+              <button onClick={handleGenerateInteractiveLab} disabled={interactiveLabGenerating}>
+                {interactiveLabGenerating ? 'Generating...' : 'Generate Lab'}
+              </button>
+            </div>
+            <p className="teacher-test-prompt-tip">The lab uses recent student performance to tune the difficulty and guidance.</p>
+
+            {labStatus && labStatus !== 'Waiting for instruction' && <p className="teacher-lab-status">{labStatus}</p>}
+
+            {interactiveLabPlan && (
+              <div className="teacher-lab-result">
+                <div className="teacher-lab-result-head">
+                  <span className="teacher-chip">{interactiveLabPlan.mode === 'lab' ? 'Interactive Lab' : 'Quiz fallback'}</span>
+                  <span>{interactiveLabPlan.reason}</span>
+                </div>
+                <h4>{interactiveLabPlan.title}</h4>
+                <p>{interactiveLabPlan.summary}</p>
+                <p className="teacher-lab-history">{interactiveLabPlan.personalizationHint}</p>
+
+                {interactiveLabPlan.mode === 'lab' && interactiveLabPlan.lab && (
+                  <div className="teacher-lab-workbench">
+                    <div className="teacher-lab-section">
+                      <strong>Objective</strong>
+                      <p>{interactiveLabPlan.lab.objective}</p>
+                    </div>
+
+                    <div className="teacher-lab-section">
+                      <strong>Compare prompt</strong>
+                      <p>{interactiveLabPlan.lab.comparePrompt}</p>
+                    </div>
+
+                    <div className="teacher-lab-layouts">
+                      {interactiveLabPlan.lab.layouts.map((layout) => {
+                        const rating = interactiveLabRatings[layout.id] || 0;
+                        return (
+                          <article key={layout.id} className="teacher-lab-layout-card">
+                            <h5>{layout.name}</h5>
+                            <p>{layout.description}</p>
+                            <small>{layout.compareFocus}</small>
+                            <div className="teacher-lab-rating-row">
+                              <span>Rate</span>
+                              <div>
+                                {[1, 2, 3, 4, 5].map((value) => (
+                                  <button
+                                    key={`${layout.id}-${value}`}
+                                    className={`teacher-lab-rating ${rating === value ? 'selected' : ''}`}
+                                    onClick={() =>
+                                      setInteractiveLabRatings((prev) => ({
+                                        ...prev,
+                                        [layout.id]: value,
+                                      }))
+                                    }
+                                  >
+                                    {value}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {rating > 0 && <p className="teacher-lab-rating-note">Current rating: {rating}/5</p>}
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    <div className="teacher-lab-section">
+                      <strong>Student steps</strong>
+                      <ol>
+                        {interactiveLabPlan.lab.studentSteps.map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <div className="teacher-lab-section">
+                      <strong>Rating guide</strong>
+                      <ul>
+                        {interactiveLabPlan.lab.ratingScale.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="teacher-lab-section">
+                      <strong>Reflection questions</strong>
+                      <ul>
+                        {interactiveLabPlan.lab.reflectionQuestions.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {labAverageRating !== null && <p className="teacher-lab-rating-summary">Average rating: {labAverageRating}/5</p>}
+                  </div>
+                )}
+
+                {interactiveLabPlan.mode === 'quiz' && interactiveLabPlan.quiz && (
+                  <div className="teacher-lab-fallback">
+                    <strong>Use quiz instead</strong>
+                    <p>{interactiveLabPlan.quiz.note}</p>
+                    <button className="small" onClick={() => applyQuizFallbackPrompt(interactiveLabPlan.quiz!.suggestedPrompt)}>
+                      Load quiz prompt
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2752,49 +3637,52 @@ export default function Home() {
           )}
         </div>
       </section>
+      )}
 
-      {previewUrl && (
-        <div className="overlay">
-          <div className="modal">
-            <header>
-              <strong>{previewName}</strong>
-              <div>
-                <a href={previewUrl} target="_blank" rel="noreferrer">
-                  Open in new tab
-                </a>
-                <button
-                  onClick={() => {
-                    setPreviewUrl(null);
-                    setPreviewName(null);
-                  }}
-                >
-                  Close
-                </button>
+          {previewUrl && (
+            <div className="overlay">
+              <div className="modal">
+                <header>
+                  <strong>{previewName}</strong>
+                  <div>
+                    <a href={previewUrl} target="_blank" rel="noreferrer">
+                      Open in new tab
+                    </a>
+                    <button
+                      onClick={() => {
+                        setPreviewUrl(null);
+                        setPreviewName(null);
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </header>
+                <iframe src={previewUrl} title={previewName || 'preview'} />
               </div>
-            </header>
-            <iframe src={previewUrl} title={previewName || 'preview'} />
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {summaryOpen && (
-        <div className="overlay">
-          <div className="modal summary">
-            <header>
-              <strong>AI Summary</strong>
-              <button
-                onClick={() => {
-                  setSummaryOpen(false);
-                  setSummaryText(null);
-                }}
-              >
-                Close
-              </button>
-            </header>
-            <section>{summaryText || 'No summary generated.'}</section>
-          </div>
+          {summaryOpen && (
+            <div className="overlay">
+              <div className="modal summary">
+                <header>
+                  <strong>AI Summary</strong>
+                  <button
+                    onClick={() => {
+                      setSummaryOpen(false);
+                      setSummaryText(null);
+                    }}
+                  >
+                    Close
+                  </button>
+                </header>
+                <section>{summaryText || 'No summary generated.'}</section>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </main>
   );
 }

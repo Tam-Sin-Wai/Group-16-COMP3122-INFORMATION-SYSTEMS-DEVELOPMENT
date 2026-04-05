@@ -5,6 +5,8 @@ build/            # Alternative build folder
 
 # Node.js dependencies
 node_modules/     # External packages installed by npm (can be re-downloaded)
+**/node_modules/
+**/*.node
 
 # Environment files containing secrets
 .env
