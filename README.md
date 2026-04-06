@@ -1,157 +1,243 @@
-# EduAI – AI-Powered Personalised Learning Platform
+# EduAI Platform (Group 16)
 
-**Group 16 · COMP3122 Information Systems Development · 2025/26 Semester 2**
+COMP3122 Information Systems Development project Group 16.
 
-A teacher-facilitated, student-centred, personalised, and interactive learning platform
-powered by Generative AI — enabling teachers to deliver adaptive learning experiences at scale.
+This repository contains a Next.js based education platform prototype with:
+- course dashboard and subject switching
+- virtual teacher chat with AI fallback support
+- file upload center (upload, list, rename, delete, summarize)
+- course data modules (materials, assignments, grades, FAQs, key points, quizzes)
+- project and group management for classroom collaboration
+- Clibot Edu interactive activity generator and lab planner
 
----------------------------------------------------------------------------
-Todo
----------------------------------------------------------------------------
-add keys to vercel : ai api, supabase api
-add functions
+## Repository Structure
 
-
-
-
-
-
-
-
-
----
-
-
-## Platform Vision
-
-EduAI empowers teachers to create meaningful, personalised learning journeys for every student.
-Rather than a passive content repository, the platform actively facilitates:
-
-- 🎓 **Personalised AI tutoring** – students get course-specific answers from a virtual teacher trained on actual course materials
-- 👥 **Teacher-assigned study groups** – teachers group students for projects; each group gets its own AI-assisted chat room
-- 💬 **AI in the chat** – students can `@AI` in any group chat to get instant, context-aware answers from course materials
-- 📊 **Progress visibility** – last-online status, assignment tracking, and grade overviews for informed teacher interventions
-
----
-
-## Features
-
-| Feature | Status |
-|---|---|
-| **Virtual Teacher** for per-course AI chat | Live |
-| **Study Groups** with teacher assignment support | Live |
-| **@AI in Group Chat** for course-aware help | Live |
-| **Member last-online status** in group chat | Live |
-| Course Materials viewer | Planned |
-| Assignments tracker | Planned |
-| Grades overview | Planned |
-| Class Discussions board | Planned |
-
-### Virtual Teacher
-Powered by OpenAI GPT-4o-mini, the virtual teacher draws context from:
-- Lecture note summaries
-- Lecture recording transcripts
-- Assignment guidelines
-- Class discussion threads
-
-Students select their course and the AI provides accurate, context-specific responses to support their learning journey.
-
-### Study Groups
-Teachers create project groups per assignment, and students are auto-assigned or manually placed.
-Each group gets:
-- A persistent **group chat room** visible to all members
-- **Last-online indicators** per student (Online now / X min ago / X hours ago)
-- An embedded **AI assistant** — type `@AI <question>` to invoke it in any group message
-
----
+- `edu-16-app/`: main Next.js application
+- `ENV_SETUP.md`: environment setup and troubleshooting notes
+- `PROGRESS.md`: project progress tracker
+- `requirements.txt`: legacy Python dependencies from earlier prototype stage
+- `package.json` (root): convenience scripts that run the app inside `edu-16-app`
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Python · Flask |
-| AI | OpenAI API (GPT-4o-mini) |
-| Database | Supabase (PostgreSQL) |
-| Frontend | HTML · Tailwind CSS · JavaScript |
-| Deployment | Vercel |
+- Frontend and Backend: Next.js App Router, React, TypeScript
+- Styling and Motion: CSS, Framer Motion
+- Interaction and Drag Drop: dnd-kit
+- Data and Storage: Supabase (Postgres + Storage)
+- AI: OpenAI API (optional, with fallback responses)
 
----
+## Current Features
+
+### 1. Dashboard
+- course overview cards and key metrics
+- recent activity feed from uploaded files and course data
+- custom feature layout support
+
+### 2. Virtual Teacher
+- course aware assistant chat
+- uses static course context plus uploaded file excerpts
+- logs interactions to FAQ and virtual teacher log tables when available
+
+### 3. Upload Center
+- upload files to Supabase bucket `documents`
+- list files by `courses/<courseId>/...`
+- rename, delete, preview, and summarize files
+
+### 4. Course Data APIs
+- materials
+- assignments
+- assignment related materials
+- grades
+- FAQs
+- key points
+- quizzes
+- interactive lab planning
+
+### 5. Group Management
+- create projects
+- create and list groups under project
+- group member count and latest chat timestamp support
+- local demo fallback behavior when project tables are missing
+
+### 6. Clibot Edu
+- generate activities: quiz, matching, ordering, fill-blank, scenario, speed challenge, classification, cause-effect, map-label, memory, debate, team-battle
+- activity personalization flow
+- optional interactive lab plan generation
+
+## API Endpoints (Current)
+
+### Health
+- `GET /api/health`
+
+### Files
+- `POST /api/files/upload`
+- `GET /api/files/list?courseId=<id>`
+- `POST /api/files/rename`
+- `POST /api/files/delete`
+- `POST /api/files/summary`
+
+### Virtual Teacher
+- `POST /api/virtual-teacher/chat`
+
+### Course Data
+- `GET /api/courses/[courseId]/materials`
+- `GET /api/courses/[courseId]/assignments`
+- `GET /api/courses/[courseId]/assignments/[assignmentId]/materials`
+- `GET /api/courses/[courseId]/grades`
+- `GET /api/courses/[courseId]/faqs`
+- `GET /api/courses/[courseId]/keypoints`
+- `GET /api/courses/[courseId]/quizzes`
+- `POST /api/courses/[courseId]/interactive-labs`
+
+### Projects and Groups
+- `GET /api/projects?courseId=<id>`
+- `POST /api/projects`
+- `GET /api/projects/[projectId]/groups`
+- `POST /api/projects/[projectId]/groups`
+
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+- Supabase project (recommended for full feature behavior)
+- Optional: OpenAI API key for non-fallback AI responses
+
+## Environment Variables
+
+Create `edu-16-app/.env.local` and configure:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-key-optional
+```
+
+Notes:
+- Server routes use `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- If Supabase values are missing, some pages fall back to empty or local demo data.
 
 ## Local Development
 
-### 1. Clone & install dependencies
+From repository root:
 
 ```bash
-git clone <repo-url>
-cd Group-16-COMP3122-INFORMATION-SYSTEMS-DEVELOPMENT
-pip install -r requirements.txt
+npm install
+npm run dev
 ```
 
-### 2. Configure environment variables
+Then open:
+- `http://localhost:3000`
+
+Alternative (inside app folder):
 
 ```bash
-cp .env.example .env
-# Edit .env and fill in:
-#   OPENAI_API_KEY
-#   SUPABASE_URL
-#   SUPABASE_KEY
-#   FLASK_SECRET_KEY
+cd edu-16-app
+npm install
+npm run dev
 ```
 
-### 3. Set up the database
-
-Open the **Supabase SQL Editor** for your project and run the contents of `supabase/schema.sql`.
-
-### 4. Run the app
+## Build and Run Production Locally
 
 ```bash
-python api/index.py
+npm run build
+npm run start
 ```
 
-Visit `http://localhost:5000` in your browser.
+## Deployment Notes
 
-> **Note:** The app includes mock course data and materials, so it works even without a Supabase connection configured. The AI chat requires a valid `OPENAI_API_KEY`.
+Vercel deployment is supported.
+Use `edu-16-app` as the project root in Vercel and add the same environment variables there.
 
----
+## User Manual
 
-## Deployment to Vercel
+### A. Admin Manual
 
-1. Push this repository to GitHub.
-2. Import the project in [Vercel](https://vercel.com).
-3. Add the environment variables (`OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `FLASK_SECRET_KEY`) in the Vercel project settings.
-4. Deploy — Vercel will automatically use `vercel.json` to route requests to the Flask app.
+Use this role for platform setup, configuration, and operational checks.
 
----
+1. Configure environment
+- create `edu-16-app/.env.local`
+- fill Supabase URL, anon key, service role key
+- optionally set OpenAI key
 
-## Project Structure
+2. Start and validate service
+- run `npm run dev`
+- open `http://localhost:3000`
+- call `GET /api/health` and confirm successful JSON response
 
-```
-├── api/
-│   └── index.py              # Flask application (Vercel entry point)
-├── templates/
-│   ├── base.html              # Base layout with sidebar navigation
-│   ├── index.html             # Dashboard
-│   ├── virtual_teacher.html   # AI chat page (per course)
-│   ├── groups.html            # Study groups listing
-│   ├── group_chat.html        # Individual group chat with @AI support
-│   ├── materials.html         # Course Materials (placeholder)
-│   ├── assignments.html       # Assignments (placeholder)
-│   ├── grades.html            # Grades (placeholder)
-│   └── padlet.html            # Class Discussions (placeholder)
-├── static/
-│   ├── css/style.css          # Custom styles
-│   ├── js/chat.js             # Virtual Teacher chat logic
-│   └── js/group_chat.js       # Group chat logic (@AI support)
-├── supabase/
-│   └── schema.sql             # Supabase database schema (incl. study_groups)
-├── PROGRESS.md                # Developer task checklist
-├── requirements.txt
-├── vercel.json
-└── .env.example
-```
+3. Validate storage setup
+- ensure Supabase bucket `documents` exists
+- verify files upload under `courses/<courseId>/...`
 
----
+4. Validate database tables
+- apply SQL schema from `edu-16-app/supabase/schema.grouping-chat-ai.sql`
+- check project and group APIs return real rows (not fallback)
 
-## Group 16 Members
+5. Production deployment checklist
+- set Vercel root to `edu-16-app`
+- add environment variables in Vercel settings
+- run a smoke test on dashboard, file upload, virtual teacher, and project grouping
 
-*COMP3122 · 2025/26 Semester 2*
+### B. Instructor Manual
+
+Use this role to prepare course content and manage class activities.
+
+1. Enter Dashboard
+- open app homepage
+- choose target subject from Available subjects
+- review activity feed and overview metrics
+
+2. Manage teaching files
+- go to Upload Center
+- upload lecture notes or reference documents
+- use rename, delete, preview, and summarize actions as needed
+
+3. Use Virtual Teacher
+- open Virtual Teacher panel
+- ask course specific questions
+- verify replies reference course context and uploaded sources when relevant
+
+4. Manage projects and groups
+- open Group Management
+- create project with group settings (group count and capacity)
+- create and review generated groups
+- monitor member counts and latest chat status
+
+5. Generate class activities (Clibot Edu)
+- enter prompt for desired activity
+- choose item count and generate
+- run or personalize generated activity for your class
+- optionally generate interactive lab plans
+
+### C. Student Manual
+
+Use this role for learning support and self-practice.
+
+1. Select your course
+- from dashboard subject cards, select your current course
+
+2. Ask the Virtual Teacher
+- open virtual teacher panel
+- ask concept questions or assignment structure questions
+- read concise guidance and follow-up prompts
+
+3. Review available learning materials
+- use course data panels to review materials, assignments, and grades (if published)
+
+4. Participate in project groups
+- view assigned project groups (if configured by instructor)
+- track group readiness through group and member information shown in the app
+
+5. Practice with interactive activities
+- complete quiz or game-like activities generated by instructor
+- review your score feedback to identify weak areas
+
+## Known Limitations
+
+- Authentication and role based access control are not fully enforced yet in UI.
+- Some modules may run in fallback mode if Supabase tables are unavailable.
+- OpenAI responses require valid API key; otherwise fallback response logic is used.
+
+## Maintainers
+
+Group 16, COMP3122 Information Systems Development.
