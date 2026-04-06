@@ -274,9 +274,9 @@ html {
 
 .dashboard-hero {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, #13293d, #29435c 55%, #d6e6f4);
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #f5f5f5;
+  color: #222;
+  border: 1px solid #ddd;
   display: grid;
   gap: 16px;
 }
@@ -314,8 +314,9 @@ html {
 }
 
 .dashboard-hero-meta span {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #222;
 }
 
 .dashboard-hero-actions a {
@@ -381,6 +382,12 @@ html {
   justify-content: space-between;
   gap: 10px;
   align-items: flex-start;
+  min-width: 0;
+}
+
+.activity-item > div {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .activity-item strong,
@@ -393,11 +400,25 @@ html {
   margin: 4px 0 0;
   color: #334155;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .activity-item small {
   color: #64748b;
   white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .activity-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .activity-item small {
+    white-space: normal;
+  }
 }
 
 .activity-item.file {
